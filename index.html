@@ -978,7 +978,7 @@
 
     function downloadDatFile(applicant) {
       const encryptedText = encryptData(JSON.stringify(applicant));
-      const blob = new Blob([encryptedText], { type: "text/plain;charset=utf-8" });
+      const blob = new Blob([encryptedText], { type: "application/octet-stream" });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
       a.download = `出願データ_${applicant.id}_${applicant.name.replace(/\s+/g, "")}.dat`;
