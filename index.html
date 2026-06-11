@@ -552,10 +552,10 @@
     <div id="toast-message" class="text-xs font-semibold"></div>
   </div>
 
-  <!-- 受験票・合否通知の模擬ポップアップモーダル -->
-  <div id="modal-container" class="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-50 flex items-center justify-center hidden">
-    <div class="bg-white rounded-2xl border border-slate-200 p-6 max-w-md w-full shadow-2xl relative space-y-4 m-4">
-      <button onclick="closeModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
+  <!-- 受験票・合否通知などのポップアップモーダル -->
+  <div id="modal-container" class="fixed inset-0 bg-slate-950/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4 overflow-y-auto">
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 max-w-md w-full shadow-2xl relative space-y-4 my-auto">
+      <button onclick="closeModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition">
         <i data-lucide="x" class="w-5 h-5"></i>
       </button>
       <div id="modal-body-content">
@@ -576,13 +576,12 @@
     let state = {
       applicants: [],
       auditLogs: [],
-      currentApplicantId: null, // 詳細表示やマイページ用
+      currentApplicantId: null,
       uploadCache: {
         photo: null,
         receipt: null,
         receiptName: ""
       },
-      // セキュリティ状態
       adminSession: {
         isLoggedIn: false,
         lastActivity: 0,
@@ -595,8 +594,7 @@
       }
     };
 
-    // パスワードのハッシュシミュレーション
-    const HASHED_PASS = "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918"; // "admin1234"
+    const HASHED_PASS = "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918";
 
     const MOCK_AVATARS = [
       "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%236366f1'/><circle cx='50' cy='37' r='20' fill='%23ffffff'/><path d='M20,78 C20,60 30,55 50,55 C70,55 80,60 80,78' fill='%23ffffff'/></svg>",
@@ -606,14 +604,10 @@
 
     const MOCK_RECEIPT = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 120'><rect x='10' y='10' width='80' height='100' rx='5' fill='%23ecfdf5' stroke='%23a7f3d0' stroke-width='4'/><circle cx='50' cy='45' r='18' fill='%23d1fae5'/><path d='M42,45 L48,51 L58,39' fill='none' stroke='%2310b981' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'/><line x1='25' y1='75' x2='75' y2='75' stroke='%2310b981' stroke-width='4' stroke-linecap='round'/></svg>";
 
-    // --- アプリケーション起動処理 ---
     document.addEventListener("DOMContentLoaded", () => {
       init();
-      // 操作によるセッション期限延長のためのグローバルリスナー
       document.addEventListener("click", updateActivity);
       document.addEventListener("keydown", updateActivity);
-      
-      // ドラッグ＆ドロップ機能のセットアップ
       setupDragAndDrop();
     });
 
@@ -643,24 +637,20 @@
 
       lucide.createIcons();
       
-      // --- ★ 隠し管理者モード（シークレットURL）の判定 ---
       const urlParams = new URLSearchParams(window.location.search);
       const isAdminMode = urlParams.get('mode') === 'admin';
 
       if (isAdminMode) {
-        // 「?mode=admin」をつけてアクセスした場合のみ、管理メニューを表示して管理者画面へ
         document.getElementById("portal-nav").classList.remove("hidden");
         switchPortal("admin");
         checkAdminAuthState();
       } else {
-        // 通常の志願者アクセスの場合、管理者メニューは一切表示しない
         document.getElementById("portal-nav").classList.add("hidden");
         switchPortal("applicant");
         showApplicantSubView("menu");
       }
     }
 
-    // --- 年齢判定と保護者セクションの表示制御 ---
     function checkAge() {
       const birthInput = document.getElementById("app-birth").value;
       const guardSection = document.getElementById("guardian-section");
@@ -681,31 +671,26 @@
         }
         
         if (age >= 18) {
-          // 成人の場合：保護者情報は不要（非表示・必須解除）
           guardSection.classList.add("hidden");
           guardInputs.forEach(el => el.required = false);
         } else {
-          // 未成年の場合：保護者情報は必須（表示・必須化）
           guardSection.classList.remove("hidden");
           guardInputs.forEach(el => el.required = true);
         }
       } else {
-        // 未入力または不正な形式の場合はデフォルトで表示（必須）
         guardSection.classList.remove("hidden");
         guardInputs.forEach(el => el.required = true);
       }
     }
 
-    // --- セキュリティ暗号化・復号処理 (XOR難読化 + Base64) ---
-    const SEC_KEY = 79; // XORキー
+    const SEC_KEY = 79;
     function encryptData(text) {
       const codeArray = [];
       const len = text.length;
       for (let i = 0; i < len; i++) {
         codeArray.push(String.fromCharCode(text.charCodeAt(i) ^ SEC_KEY));
       }
-      const xorText = codeArray.join("");
-      return btoa(unescape(encodeURIComponent(xorText)));
+      return btoa(unescape(encodeURIComponent(codeArray.join(""))));
     }
     function decryptData(base64Text) {
       const text = decodeURIComponent(escape(atob(base64Text)));
@@ -717,21 +702,13 @@
       return codeArray.join("");
     }
 
-    // --- XSS防止用：HTMLエスケープ ---
     function escapeHTML(str) {
       if (typeof str !== "string") return str;
       return str.replace(/[&<>'"]/g, (tag) => {
-        return ({
-          "&": "&amp;",
-          "<": "&lt;",
-          ">": "&gt;",
-          "'": "&#39;",
-          '"': "&quot;"
-        }[tag] || tag);
+        return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[tag] || tag);
       });
     }
 
-    // --- 監査ログ記録システム ---
     function addAuditLog(category, message, severity = "info") {
       const newLog = {
         time: getFormattedDate(new Date()),
@@ -739,18 +716,13 @@
         message: message,
         severity: severity
       };
-      state.auditLogs.unshift(newLog); // 最新を上に
-      if (state.auditLogs.length > 500) {
-        state.auditLogs.pop();
-      }
+      state.auditLogs.unshift(newLog);
+      if (state.auditLogs.length > 500) state.auditLogs.pop();
       localStorage.setItem("sec_admission_audit_logs", encryptData(JSON.stringify(state.auditLogs)));
       
-      if (state.adminSession.isLoggedIn) {
-        renderAuditLogs();
-      }
+      if (state.adminSession.isLoggedIn) renderAuditLogs();
     }
 
-    // --- 画面切り替え (志願者 vs 管理者) ---
     function switchPortal(portal) {
       const applicantSec = document.getElementById("applicant-portal");
       const adminSec = document.getElementById("admin-dashboard");
@@ -780,7 +752,6 @@
       }
     }
 
-    // --- 志願者ポータルのサブ画面切り替え ---
     function showApplicantSubView(view) {
       const menuGrid = document.querySelector(".portal-cards-grid");
       const heroArea = document.querySelector(".portal-hero");
@@ -803,7 +774,7 @@
         removeUploadedFile("receipt");
         const chk = document.getElementById("confirm-transcript-sent");
         if (chk) chk.checked = false;
-        checkAge(); // リセット時に保護者欄の表示も初期状態へ戻す
+        checkAge();
       } else if (view === "status-check") {
         menuGrid.classList.add("hidden");
         heroArea.classList.add("hidden");
@@ -818,7 +789,6 @@
       }
     }
 
-    // --- ドラッグ&ドロップ / ファイル選択の処理 ---
     function triggerFileInput(id) {
       document.getElementById(id).click();
     }
@@ -834,29 +804,19 @@
         return;
       }
 
-      // 画像自動リサイズ＆圧縮（Canvas使用）フリーズ回避処理
       if (isImage) {
         const reader = new FileReader();
         reader.onload = function (e) {
           const img = new Image();
           img.onload = function () {
             const canvas = document.createElement("canvas");
-            let max_size = 150; // 顔写真
-            if (type === "receipt") {
-              max_size = 350; // 領収書
-            }
+            let max_size = type === "photo" ? 150 : 350;
             let width = img.width;
             let height = img.height;
             if (width > height) {
-              if (width > max_size) {
-                height *= max_size / width;
-                width = max_size;
-              }
+              if (width > max_size) { height *= max_size / width; width = max_size; }
             } else {
-              if (height > max_size) {
-                width *= max_size / height;
-                height = max_size;
-              }
+              if (height > max_size) { width *= max_size / height; height = max_size; }
             }
             canvas.width = width;
             canvas.height = height;
@@ -867,10 +827,8 @@
             
             if (type === "photo") {
               state.uploadCache.photo = compressedBase64;
-              const previewImg = document.getElementById("preview-photo");
-              const container = document.getElementById("preview-photo-container");
-              previewImg.src = compressedBase64;
-              container.classList.remove("hidden");
+              document.getElementById("preview-photo").src = compressedBase64;
+              document.getElementById("preview-photo-container").classList.remove("hidden");
             } else {
               state.uploadCache[type] = compressedBase64;
               state.uploadCache[`${type}Name`] = file.name;
@@ -881,7 +839,6 @@
         };
         reader.readAsDataURL(file);
       } else {
-        // PDF等のバイナリはモックで軽量処理
         state.uploadCache[`${type}Name`] = file.name;
         state.uploadCache[type] = MOCK_RECEIPT;
         showTranscriptPreview(type, file.name);
@@ -889,10 +846,8 @@
     }
 
     function showTranscriptPreview(type, name) {
-      const container = document.getElementById(`preview-${type}-container`);
-      const nameLabel = document.getElementById(`preview-${type}-name`);
-      nameLabel.textContent = name;
-      container.classList.remove("hidden");
+      document.getElementById(`preview-${type}-name`).textContent = name;
+      document.getElementById(`preview-${type}-container`).classList.remove("hidden");
     }
 
     function removeUploadedFile(type) {
@@ -909,7 +864,6 @@
       }
     }
 
-    // --- 志願者：新規出願・確定処理 ---
     function handleFormSubmit(event) {
       event.preventDefault();
       const name = document.getElementById("app-name").value.trim();
@@ -919,14 +873,10 @@
       const email = document.getElementById("app-email").value.trim();
       const prevSchool = document.getElementById("app-prev-school").value.trim();
       const prevCourse = document.getElementById("app-prev-course").value;
-      const faculty = document.getElementById("app-faculty").value; // 編入学 / 転入学
-      const course = document.getElementById("app-course").value; // 通信制の課程
+      const faculty = document.getElementById("app-faculty").value; 
+      const course = document.getElementById("app-course").value; 
 
-      // 保護者情報（成人で非表示の場合は空として扱う）
-      let guardName = "";
-      let guardRelation = "";
-      let guardKana = "";
-      let guardPhone = "";
+      let guardName = "", guardRelation = "", guardKana = "", guardPhone = "";
 
       const guardSection = document.getElementById("guardian-section");
       if (!guardSection.classList.contains("hidden")) {
@@ -936,10 +886,8 @@
         guardPhone = document.getElementById("app-guard-phone").value.trim();
       }
 
-      // 同意チェックボックス
       const transcriptChecked = document.getElementById("confirm-transcript-sent").checked;
 
-      // バリデーション
       if (birth.length !== 8 || isNaN(birth)) {
         showToast("生年月日は半角数字8桁で入力してください", "error");
         return;
@@ -969,19 +917,16 @@
         email: email,
         prevSchool: prevSchool,
         prevCourse: prevCourse,
-        faculty: faculty, // 志願区分
-        course: course, // 志望課程
+        faculty: faculty, 
+        course: course, 
         guardianName: guardName,
         guardianRelation: guardRelation,
         guardianKana: guardKana,
         guardianPhone: guardPhone,
-        // 成績単位修得証明書の事前提出フラグ
         transcriptStatus: "school_sent",
-        // 提出書類 (軽量化済)
         photo: state.uploadCache.photo,
         receipt: state.uploadCache.receipt,
         receiptName: state.uploadCache.receiptName || "振込領収書.png",
-        
         date: getFormattedDate(new Date()),
         feePaid: false, 
         status: "applied", 
@@ -989,35 +934,20 @@
         examId: null
       };
 
-      // 1. ローカルメモリに一時保存
       state.applicants.push(newApplicant);
       saveToLocalStorage();
-
-      // 2. 出願ファイル (.dat) をダウンロード
       downloadDatFile(newApplicant);
-
-      // 3. メールクライアント起動用リンク生成（mailto）
       triggerApplicationEmail(newApplicant);
 
-      // 監査ログに記録
-      addAuditLog(
-        "DATA_MODIFY", 
-        `新規Web出願をローカル処理。出願番号: ${appId}, 氏名: ${name} / メール添付送出準備`,
-        "info"
-      );
-
-      // 出願案内完了モーダル表示
+      addAuditLog("DATA_MODIFY", `新規Web出願をローカル処理。出願番号: ${appId}, 氏名: ${name} / メール添付送出準備`, "info");
       showRegistrationCompleteModal(newApplicant);
       
-      // 状況確認画面の準備
       showApplicantSubView("status-check");
       document.getElementById("login-name").value = name;
       document.getElementById("login-email").value = email;
     }
 
-    // --- メール自動作成リンク起動 ---
     function triggerApplicationEmail(applicant) {
-      // 教育委員会指定メールアドレスを設定
       const schoolEmail = "t-itoryoh@e.osakamanabi.jp";
       const subject = `【web出願】出願データ送信（出願番号：${applicant.id} / 氏名：${applicant.name}）`;
       
@@ -1048,14 +978,9 @@ ${applicant.guardianName ? `・氏名: ${applicant.guardianName}（続柄: ${app
 --------------------------------------------------`;
 
       const mailtoLink = `mailto:${schoolEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-      
-      // 新しいウィンドウまたはメールアプリを開く
-      setTimeout(() => {
-        window.location.href = mailtoLink;
-      }, 800);
+      setTimeout(() => { window.location.href = mailtoLink; }, 800);
     }
 
-    // --- 出願者データの暗号化ファイルダウンロード処理 ---
     function downloadDatFile(applicant) {
       const encryptedText = encryptData(JSON.stringify(applicant));
       const blob = new Blob([encryptedText], { type: "text/plain;charset=utf-8" });
@@ -1067,7 +992,7 @@ ${applicant.guardianName ? `・氏名: ${applicant.guardianName}（続柄: ${app
       document.body.removeChild(a);
     }
 
-    // --- 出願完了案内モーダル ---
+    // --- ★ 出願完了案内モーダルのデザイン修正 (赤色強調・警告仕様) ---
     function showRegistrationCompleteModal(applicant) {
       const modal = document.getElementById("modal-container");
       const body = document.getElementById("modal-body-content");
@@ -1075,33 +1000,39 @@ ${applicant.guardianName ? `・氏名: ${applicant.guardianName}（続柄: ${app
 
       body.innerHTML = `
         <div class="text-center space-y-4">
-          <div class="mx-auto w-12 h-12 bg-indigo-100 text-indigo-700 rounded-full flex items-center justify-center">
-            <i data-lucide="mail-check" class="w-6 h-6"></i>
+          <!-- 警告アイコン -->
+          <div class="mx-auto w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center shadow-inner">
+            <i data-lucide="alert-triangle" class="w-8 h-8 animate-pulse"></i>
           </div>
-          <h4 class="text-lg font-bold text-slate-800">出願用メール作成画面が立ち上がりました</h4>
           
-          <div class="bg-indigo-50 border border-indigo-100 p-4 rounded-xl text-left space-y-2 text-xs text-slate-700">
-            <p class="font-bold text-indigo-900 flex items-center gap-1">
-              <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-500"></i>重要：メール送信を完了させてください
+          <!-- 最も目立つ警告メッセージ -->
+          <h4 class="text-2xl font-black text-red-600 tracking-tight">まだ出願は完了していません！</h4>
+          <p class="text-sm font-bold text-slate-700 bg-slate-100 py-2 rounded-lg">出願用のメール作成画面が立ち上がりました</p>
+          
+          <!-- 警告文と手順ボード -->
+          <div class="bg-red-50 border-2 border-red-200 p-5 rounded-xl text-left space-y-3 text-sm text-slate-800 shadow-sm">
+            <p class="font-bold text-red-800 flex items-center gap-1.5 border-b border-red-200 pb-2 text-base">
+              <i data-lucide="mail" class="w-5 h-5 text-red-600"></i>重要：最後にメールを送信してください
             </p>
-            <p class="text-slate-800 font-semibold">1. パソコン/スマホに保存された暗号化ファイル（.dat）を確認します。</p>
-            <p class="text-slate-600 font-mono text-[10px] pl-2">ファイル名: 出願データ_${applicant.id}_${escapeHTML(applicant.name)}.dat</p>
-            <p class="text-slate-800 font-semibold">2. 自動で開いたメール作成画面に、そのファイルを添付してそのまま本校宛に送信してください。</p>
-            <p class="text-red-600 font-semibold">※メールの送信が完了するまで出願手続きは完了いたしません。</p>
+            <p class="font-semibold leading-relaxed">1. 端末に保存された暗号化ファイル（.dat）を確認します。</p>
+            <p class="text-slate-600 font-mono text-[11px] pl-3 py-2 bg-white rounded border border-red-100 break-all shadow-inner">ファイル名: 出願データ_${applicant.id}_${escapeHTML(applicant.name)}.dat</p>
+            <p class="font-semibold leading-relaxed">2. 自動で開いたメール作成画面に、<span class="text-red-600 font-bold underline bg-red-100 px-1">そのファイルを添付</span>して送信してください。</p>
           </div>
 
-          <div class="p-3 bg-slate-50 rounded-lg text-xs space-y-1 text-left">
+          <!-- 確認情報 -->
+          <div class="p-3 bg-slate-50 rounded-lg text-xs space-y-1 text-left border border-slate-200">
             <div><strong>お名前:</strong> ${escapeHTML(applicant.name)}</div>
             <div><strong>出願ID:</strong> <span class="font-mono font-bold">${applicant.id}</span></div>
             <div><strong>志願区分:</strong> ${escapeHTML(applicant.faculty)}</div>
           </div>
 
-          <div class="flex gap-2">
-            <button onclick="downloadDatFile(JSON.parse(decryptData('${encryptData(JSON.stringify(applicant))}')))" class="flex-1 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-semibold flex items-center justify-center gap-1">
+          <!-- アクションボタン -->
+          <div class="flex gap-3 pt-2">
+            <button onclick="downloadDatFile(JSON.parse(decryptData('${encryptData(JSON.stringify(applicant))}')))" class="flex-1 py-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-lg text-xs font-bold flex items-center justify-center gap-1 shadow-sm transition">
               <i data-lucide="download" class="w-4 h-4"></i> ファイル再保存
             </button>
-            <button onclick="closeModal(); queryApplicationStatus();" class="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold">
-              状況確認へ進む
+            <button onclick="closeModal(); queryApplicationStatus();" class="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold shadow-md transition">
+              確認して次へ進む
             </button>
           </div>
         </div>
@@ -1109,7 +1040,6 @@ ${applicant.guardianName ? `・氏名: ${applicant.guardianName}（続柄: ${app
       lucide.createIcons();
     }
 
-    // --- 志願者：ステータス照会 ---
     function queryApplicationStatus() {
       const nameInput = document.getElementById("login-name").value.trim();
       const emailInput = document.getElementById("login-email").value.trim();
@@ -1129,11 +1059,7 @@ ${applicant.guardianName ? `・氏名: ${applicant.guardianName}（続柄: ${app
       if (!applicant) {
         errorMsg.classList.remove("hidden");
         resultView.classList.add("hidden");
-        addAuditLog(
-          "AUTH",
-          `不審な出願状況の照会を検知。入力氏名: ${nameInput}, 入力メール: ${emailInput}`,
-          "warning"
-        );
+        addAuditLog("AUTH", `不審な照会検知。氏名: ${nameInput}, メール: ${emailInput}`, "warning");
         return;
       }
 
@@ -1154,7 +1080,6 @@ ${applicant.guardianName ? `・氏名: ${applicant.guardianName}（続柄: ${app
       document.getElementById("res-date").textContent = applicant.date;
       document.getElementById("res-photo").src = applicant.photo || MOCK_AVATARS[0];
 
-      // 生年月日を8桁表示
       document.getElementById("res-birth").textContent = formatBirthDate(applicant.birthDate);
       
       if (applicant.guardianName) {
@@ -1167,7 +1092,6 @@ ${applicant.guardianName ? `・氏名: ${applicant.guardianName}（続柄: ${app
         document.getElementById("res-guard-phone").textContent = "";
       }
 
-      // タイムライン描画
       const steps = [
         { key: "applied", domId: "step-applied" },
         { key: "fee", domId: "step-fee" },
@@ -1292,7 +1216,6 @@ ${applicant.guardianName ? `・氏名: ${applicant.guardianName}（続柄: ${app
       lucide.createIcons();
     }
 
-    // --- 2. 管理者：認証 ＆ セッション管理 ---
     function checkAdminAuthState() {
       const loginView = document.getElementById("admin-login-view");
       const dashboardView = document.getElementById("admin-dashboard-view");
@@ -1397,7 +1320,6 @@ ${applicant.guardianName ? `・氏名: ${applicant.guardianName}（続柄: ${app
       checkAdminAuthState();
     }
 
-    // --- ★ 暗号化データファイル (.dat) のドラッグ＆ドロップ回収セットアップ ---
     function setupDragAndDrop() {
       const dropZone = document.getElementById("drop-zone");
       if (!dropZone) return;
@@ -1507,7 +1429,6 @@ ${applicant.guardianName ? `・氏名: ${applicant.guardianName}（続柄: ${app
       }
     }
 
-    // --- 管理ダッシュボードのデータ描画 ---
     function renderAdminTable() {
       const tbody = document.getElementById("admin-table-body");
       document.getElementById("applicant-count").textContent = state.applicants.length;
@@ -1621,7 +1542,6 @@ ${applicant.guardianName ? `・氏名: ${applicant.guardianName}（続柄: ${app
       lucide.createIcons();
     }
 
-    // --- 審査状況コントロール処理 ---
     function toggleFeePaid(id) {
       const applicant = state.applicants.find(app => app.id === id);
       if (!applicant) return;
@@ -1631,11 +1551,7 @@ ${applicant.guardianName ? `・氏名: ${applicant.guardianName}（続柄: ${app
       renderAdminTable();
       selectApplicant(id); 
 
-      addAuditLog(
-        "DATA_MODIFY", 
-        `出願番号: ${id} の受験料確認ステータスを ${applicant.feePaid ? '【入金済】' : '【要照合】'} に変更しました。`,
-        "info"
-      );
+      addAuditLog("DATA_MODIFY", `出願番号: ${id} の受験料確認ステータスを変更しました。`, "info");
     }
 
     function updateApplicantStatus(id, newStatus) {
@@ -1650,11 +1566,7 @@ ${applicant.guardianName ? `・氏名: ${applicant.guardianName}（続柄: ${app
       renderAdminTable();
       selectApplicant(id);
 
-      addAuditLog(
-        "DATA_MODIFY", 
-        `出願番号: ${id} の審査ステータスを 【${newStatus}】 に更新しました。メモ: "${notes}"`,
-        "info"
-      );
+      addAuditLog("DATA_MODIFY", `出願番号: ${id} の審査ステータスを 【${newStatus}】 に更新しました。`, "info");
       showToast("ステータスを更新しました", "success");
     }
 
@@ -1680,15 +1592,10 @@ ${applicant.guardianName ? `・氏名: ${applicant.guardianName}（続柄: ${app
       renderAdminTable();
       selectApplicant(id);
 
-      addAuditLog(
-        "DATA_MODIFY", 
-        `出願番号: ${id} の受験票を発行しました。受験番号: ${applicant.examId}`,
-        "info"
-      );
+      addAuditLog("DATA_MODIFY", `出願番号: ${id} の受験票を発行しました。`, "info");
       showToast(`受験番号 ${applicant.examId} を発行しました`, "success");
     }
 
-    // --- 監査ログ描画 ---
     function renderAuditLogs() {
       const container = document.getElementById("audit-log-container");
       if (state.auditLogs.length === 0) {
@@ -1714,11 +1621,10 @@ ${applicant.guardianName ? `・氏名: ${applicant.guardianName}（続柄: ${app
       }).join("");
     }
 
-    // --- モックデータ生成 ---
     function generateMockData() {
       const names = ["宮沢 賢治", "新美 南吉", "太宰 治"];
       const kanas = ["ミヤザワ ケンジ", "ニイミ ナンキチ", "ダザイ オサム"];
-      const births = ["20050827", "20100730", "20100619"]; // 1人目は成人
+      const births = ["20050827", "20100730", "20100619"];
       const prevSchools = ["大阪市立第一高等学校", "府立第二高等学校", "関西第三高等学校"];
       const prevCourses = ["全日制", "定時制", "通信制"];
       const faculties = ["編入学", "転入学", "編入学"];
@@ -1735,9 +1641,8 @@ ${applicant.guardianName ? `・氏名: ${applicant.guardianName}（続柄: ${app
           email: `demo${i}@example.com`,
           prevSchool: prevSchools[i],
           prevCourse: prevCourses[i],
-          faculty: faculties[i], // 志願区分
+          faculty: faculties[i],
           course: "通信制の課程",
-          // 1人目は成人として扱うため保護者情報を空にする
           guardianName: i === 0 ? "" : `${names[i].split(" ")[0]} 惣兵衛`,
           guardianRelation: i === 0 ? "" : "父",
           guardianKana: i === 0 ? "" : `${kanas[i].split(" ")[0]} ソウベエ`,
@@ -1757,11 +1662,10 @@ ${applicant.guardianName ? `・氏名: ${applicant.guardianName}（続柄: ${app
 
       saveToLocalStorage();
       renderAdminTable();
-      addAuditLog("DATA_MODIFY", "デモ用模擬データを3件一括生成しました（編入・転入等）。", "info");
+      addAuditLog("DATA_MODIFY", "デモ用模擬データを3件生成しました。", "info");
       showToast("模擬データを3件追加しました", "info");
     }
 
-    // --- ローカルExcelダウンロード (SheetJSによる完全クライアントサイド動作) ---
     function exportToExcel() {
       if (!state.adminSession.isLoggedIn) return;
       if (state.applicants.length === 0) {
@@ -1798,15 +1702,10 @@ ${applicant.guardianName ? `・氏名: ${applicant.guardianName}（続柄: ${app
       const filename = `出願データ一括出力_${new Date().toISOString().slice(0, 10)}.xlsx`;
       XLSX.writeFile(wb, filename);
 
-      addAuditLog(
-        "DATA_EXPORT", 
-        `管理者による個人情報Excelエクスポートを実行。ファイル名: ${filename}, 出力件数: ${excelData.length}件`,
-        "warning"
-      );
+      addAuditLog("DATA_EXPORT", `管理者によるExcelエクスポートを実行。ファイル名: ${filename}`, "warning");
       showToast("Excelダウンロード完了。操作ログに記録されました", "success");
     }
 
-    // --- Excelインポート（外部にアップロードすることなく、ブラウザ内で更新） ---
     function importFromExcel(event) {
       if (!state.adminSession.isLoggedIn) return;
       const file = event.target.files[0];
@@ -1847,11 +1746,7 @@ ${applicant.guardianName ? `・氏名: ${applicant.guardianName}（続柄: ${app
           renderAdminTable();
           if (state.currentApplicantId) selectApplicant(state.currentApplicantId);
 
-          addAuditLog(
-            "DATA_MODIFY", 
-            `Excelインポートにより、${updateCount}件の志願者ステータスを一括更新しました。`,
-            "info"
-          );
+          addAuditLog("DATA_MODIFY", `Excelインポートにより${updateCount}件を更新しました。`, "info");
           showToast("Excelインポート完了。データを更新しました。", "success");
         } catch (err) {
           console.error(err);
@@ -1861,7 +1756,6 @@ ${applicant.guardianName ? `・氏名: ${applicant.guardianName}（続柄: ${app
       reader.readAsArrayBuffer(file);
     }
 
-    // --- 提出資料(モック)プレビューモーダル ---
     function openMockDoc(title, dataUrl) {
       const modal = document.getElementById("modal-container");
       const body = document.getElementById("modal-body-content");
@@ -1874,12 +1768,11 @@ ${applicant.guardianName ? `・氏名: ${applicant.guardianName}（続柄: ${app
         <div class="bg-slate-50 border p-4 rounded-xl flex items-center justify-center min-h-[300px] mt-3">
           <img src="${dataUrl}" class="max-h-[300px] object-contain shadow rounded">
         </div>
-        <p class="text-[10px] text-slate-400 text-center mt-2">※本システムは、画像をブラウザのメモリ内で完結させて表示しています</p>
+        <p class="text-[10px] text-slate-400 text-center mt-2">※画像はブラウザメモリ内で表示しています</p>
       `;
       lucide.createIcons();
     }
 
-    // --- 受験票プレビューモーダル ---
     function openExamTicket(appId) {
       const applicant = state.applicants.find(app => app.id === appId);
       if (!applicant) return;
@@ -1919,7 +1812,6 @@ ${applicant.guardianName ? `・氏名: ${applicant.guardianName}（続柄: ${app
       lucide.createIcons();
     }
 
-    // --- 合否判定通知書モーダル ---
     function openPassFailResult(appId) {
       const applicant = state.applicants.find(app => app.id === appId);
       if (!applicant) return;
@@ -1960,7 +1852,6 @@ ${applicant.guardianName ? `・氏名: ${applicant.guardianName}（続柄: ${app
       document.getElementById("modal-container").classList.add("hidden");
     }
 
-    // --- ユーティリティ関数 ---
     function formatBirthDate(birthStr) {
       if (!birthStr || birthStr.length !== 8) return birthStr;
       const y = birthStr.substring(0, 4);
