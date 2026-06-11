@@ -125,7 +125,7 @@
           <p class="font-bold flex items-center gap-1"><i data-lucide="info" class="w-4 h-4"></i> 出願完了までの重要なお手続きの流れ</p>
           <p>1. 下記フォームに必要事項を入力し、写真を登録してください。</p>
           <p>2. <strong>「出願を確定する」</strong>ボタンを押すと、自動的に暗号化された<strong>「暗号化出願ファイル (.dat)」</strong>が作成されてお使いの端末に保存されます。</p>
-          <p>3. 出願確定後に、<strong>ダウンロードされた「.datファイル」をメールに添付して、本校宛に手動（Gmail等も可）で送信してください。</strong>メール送信完了をもって、正式な出願受付となります。</p>
+          <p>3. 出願確定後に、<strong>ダウンロードされたファイル（.dat または .txt）をメールに添付して、本校宛に手動（Gmail等も可）で送信してください。</strong>メール送信完了をもって、正式な出願受付となります。</p>
         </div>
 
         <form id="admission-form" onsubmit="handleFormSubmit(event)" class="space-y-8">
@@ -421,7 +421,7 @@
               <i data-lucide="shield-check"></i> セキュリティ運用モード
             </h3>
             <p class="text-xs text-slate-300 leading-relaxed">
-              外部のクラウドやスプレッドシートへの通信を一切行わず、お使いのパソコンのブラウザメモリのみで暗号化出願ファイル（.dat）の復号・結合、およびExcelへの相互変換を行います。
+              外部のクラウドやスプレッドシートへの通信を一切行わず、お使いのパソコンのブラウザメモリのみで暗号化出願ファイル（.dat 等）の復号・結合、およびExcelへの相互変換を行います。
             </p>
           </div>
           <div class="flex flex-col gap-1 text-xs">
@@ -440,16 +440,16 @@
             <i data-lucide="file-down" class="w-6 h-6"></i>
           </div>
           <div>
-            <h4 class="text-sm font-bold text-slate-800">回収した暗号化出願ファイル（.dat）の一括取り込み</h4>
-            <p class="text-xs text-slate-500 mt-1">志願者からメール等で送られてきた暗号化出願ファイルを、まとめてここにドラッグ＆ドロップするだけで自動復号・結合されます。</p>
+            <h4 class="text-sm font-bold text-slate-800">回収した暗号化出願ファイル（.dat / .txt）の一括取り込み</h4>
+            <p class="text-xs text-slate-500 mt-1">志願者からメール等で送られてきた暗号化出願ファイル（.txtに変換されていても可）を、まとめてここにドラッグ＆ドロップするだけで自動復号・結合されます。</p>
           </div>
           
           <!-- ドラッグドロップ領域 -->
           <div id="drop-zone" class="border border-indigo-200 bg-white rounded-xl p-6 text-slate-400 text-xs hover:bg-indigo-100/50 hover:text-indigo-900 transition cursor-pointer flex flex-col items-center justify-center gap-2 max-w-xl mx-auto">
             <i data-lucide="upload-cloud" class="w-8 h-8 text-indigo-500"></i>
-            <span class="font-semibold">ここに回収した「.dat」ファイルをまとめてドラッグ＆ドロップ</span>
+            <span class="font-semibold">ここに回収した「.dat」または「.txt」ファイルをまとめてドラッグ＆ドロップ</span>
             <span>またはクリックしてファイルを選択（複数同時選択可）</span>
-            <input type="file" id="dat-file-picker" accept=".dat" multiple onchange="handleDatFilesSelected(event)" class="hidden">
+            <input type="file" id="dat-file-picker" accept=".dat,.txt,.text" multiple onchange="handleDatFilesSelected(event)" class="hidden">
           </div>
         </div>
 
@@ -519,7 +519,7 @@
                 <i data-lucide="file-check" class="text-emerald-600"></i> 提出書類リアルタイム審査
               </h4>
               <div id="check-panel-empty" class="text-center py-10 text-slate-400 text-xs">
-                出願者一覧 of 「出願番号」をクリックすると、ここに提出資料のプレビューと個別審査ボードが表示されます。
+                出願者一覧 の 「出願番号」をクリックすると、ここに提出資料のプレビューと個別審査ボードが表示されます。
               </div>
               <div id="check-panel-content" class="hidden space-y-4 text-xs">
                 <!-- JSで書類やボタンを表示 -->
@@ -976,9 +976,11 @@
       document.getElementById("login-email").value = email;
     }
 
+    // --- ★ 志願者側のダウンロード処理 (MIMEタイプをテキストに戻しGmailブロックを回避) ---
     function downloadDatFile(applicant) {
       const encryptedText = encryptData(JSON.stringify(applicant));
-      const blob = new Blob([encryptedText], { type: "application/octet-stream" });
+      // MIMEタイプを「text/plain」として出力することで、Gmail等の送信ブロックを回避
+      const blob = new Blob([encryptedText], { type: "text/plain;charset=utf-8" });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
       a.download = `出願データ_${applicant.id}_${applicant.name.replace(/\s+/g, "")}.dat`;
@@ -998,7 +1000,7 @@
 学校名：通信制の課程 受付事務局 殿
 
 【注意：送信するだけでは、まだ出願手続きは完了していません！】
-※同時にパソコンやスマートフォンにダウンロードされた暗号化出願ファイル（.dat）を、
+※同時にパソコンやスマートフォンにダウンロードされた暗号化出願ファイル（.dat 等）を、
 「必ずこのメールに添付した上で」送信してください。
 
 ■出願者情報
@@ -1037,7 +1039,7 @@ ${applicant.guardianName ? `・氏名: ${applicant.guardianName}（続柄: ${app
       }
     }
 
-    // --- ★ 出願完了案内モーダルのデザイン修正 (コピペ用Gmailテンプレート & 添付忘れ防止付き) ---
+    // --- 出願完了案内モーダル (案内文言を .dat/.txt 両対応へ) ---
     function showRegistrationCompleteModal(applicant) {
       const modal = document.getElementById("modal-container");
       const bodyContent = document.getElementById("modal-body-content");
@@ -1057,7 +1059,7 @@ ${applicant.guardianName ? `・氏名: ${applicant.guardianName}（続柄: ${app
             まだ出願は完了していません！
           </h4>
           <p class="text-xs font-bold text-slate-500">
-            お手元の「出願データ (.dat)」をメールで本校に送信していただく必要があります。
+            お手元の「出願データ」をメールで本校に送信していただく必要があります。
           </p>
           
           <!-- 手順ボード -->
@@ -1072,6 +1074,7 @@ ${applicant.guardianName ? `・氏名: ${applicant.guardianName}（続柄: ${app
               <div class="bg-white p-2 rounded border border-red-100 font-mono font-bold text-indigo-700 text-center text-[10px] break-all select-all shadow-inner">
                 出願データ_${applicant.id}_${applicant.name.replace(/\s+/g, "")}.dat
               </div>
+              <p class="text-slate-500 text-[9px] pl-2 text-center">※端末によっては「.txt」等にファイル名が変わる場合がありますが問題ありません</p>
             </div>
 
             <!-- ★★★ 【最重要】添付忘れ防止の超巨大・超強調警告枠 ★★★ -->
@@ -1080,7 +1083,7 @@ ${applicant.guardianName ? `・氏名: ${applicant.guardianName}（続柄: ${app
                 <i data-lucide="paperclip" class="w-4 h-4"></i> 【重要・注意】ファイルの添付し忘れ防止！
               </p>
               <p class="text-slate-700 text-[10px] leading-relaxed font-semibold">
-                本文だけを送っても、<span class="text-red-600 underline">「.dat」出願ファイルが添付されていないと学校側でデータを読み込めず、未出願の扱い</span>となってしまいます。メール送信画面で必ずファイルを添付してください。
+                本文だけを送っても、<span class="text-red-600 underline">出願ファイルが添付されていないと学校側でデータを読み込めず、未出願の扱い</span>となってしまいます。メール送信画面で必ずファイルを添付してください。
               </p>
             </div>
 
@@ -1149,7 +1152,7 @@ ${applicant.guardianName ? `・氏名: ${applicant.guardianName}（続柄: ${app
           <label class="flex items-center gap-2.5 cursor-pointer bg-red-100 hover:bg-red-200 p-3 rounded-lg border border-red-300 text-left transition duration-200">
             <input type="checkbox" id="chk-attachment-confirm" onchange="toggleConfirmBtn(this)" class="h-5 w-5 text-red-600 border-red-300 rounded focus:ring-red-500 shrink-0">
             <span class="text-[11px] font-black text-red-700 leading-snug">
-              「.dat」出願ファイルをメールに間違いなく添付した、またはこれから添付することを確認・了承しました。<span class="text-red-600 font-extrabold">*必須</span>
+              出願ファイルをメールに間違いなく添付した、またはこれから添付することを確認・了承しました。<span class="text-red-600 font-extrabold">*必須</span>
             </span>
           </label>
 
@@ -1284,7 +1287,7 @@ ${applicant.guardianName ? `・氏名: ${applicant.guardianName}（続柄: ${app
           <div class="bg-amber-100 p-2 rounded-lg text-amber-700"><i data-lucide="alert-circle" class="w-6 h-6 animate-pulse"></i></div>
           <div class="space-y-1">
             <h5 class="font-bold text-slate-800 text-sm">受験料の確認およびメール送信照合中</h5>
-            <p class="text-xs text-slate-600">お送りいただいたメールデータ（.datファイル）および「領収証控」の情報を校内事務局が照合確認中です。確認が取れましたら次のステップに進みます。</p>
+            <p class="text-xs text-slate-600">お送りいただいたメールデータおよび「領収証控」の情報を校内事務局が照合確認中です。確認が取れましたら次のステップに進みます。</p>
           </div>
         `;
       } else if (applicant.feePaid && applicant.status === "applied") {
@@ -1483,6 +1486,7 @@ ${applicant.guardianName ? `・氏名: ${applicant.guardianName}（続柄: ${app
       event.target.value = ""; 
     }
 
+    // --- ★ 管理者側の取り込み処理 (.dat, .txt, .text 全対応へ柔軟化) ---
     function processDatFiles(files) {
       if (!state.adminSession.isLoggedIn) {
         showToast("データ追加には管理者認証が必要です", "error");
@@ -1495,7 +1499,9 @@ ${applicant.guardianName ? `・氏名: ${applicant.guardianName}（続柄: ${app
       let filesProcessed = 0;
 
       Array.from(files).forEach(file => {
-        if (!file.name.endsWith(".dat")) {
+        // 拡張子判定の緩和 (.dat, .txt, .text を許容する)
+        const fileNameLower = file.name.toLowerCase();
+        if (!fileNameLower.endsWith(".dat") && !fileNameLower.endsWith(".txt") && !fileNameLower.endsWith(".text")) {
           errorCount++;
           filesProcessed++;
           checkAllProcessed();
@@ -1505,6 +1511,7 @@ ${applicant.guardianName ? `・氏名: ${applicant.guardianName}（続柄: ${app
         const reader = new FileReader();
         reader.onload = function(e) {
           try {
+            // 拡張子が何であっても、テキストとして暗号化文字列の解読を試みる
             const rawEncrypted = e.target.result.trim();
             const decryptedJSON = decryptData(rawEncrypted);
             const applicantObj = JSON.parse(decryptedJSON);
@@ -1546,11 +1553,11 @@ ${applicant.guardianName ? `・氏名: ${applicant.guardianName}（続柄: ${app
           );
 
           if (successCount > 0) {
-            showToast(`${successCount}件の出願データ（.dat）を正常に取り込み・復号しました`, "success");
+            showToast(`${successCount}件の出願データ（.dat / .txt）を正常に取り込み・復号しました`, "success");
           } else if (existCount > 0) {
             showToast(`取り込まれたデータはすべて登録済みでした（${existCount}件）`, "info");
           } else {
-            showToast(`ファイルの解読に失敗しました。正しい出願ファイル(.dat)かご確認ください。`, "error");
+            showToast(`ファイルの解読に失敗しました。正しい出願ファイル(.dat または .txt)かご確認ください。`, "error");
           }
         }
       }
@@ -1563,7 +1570,7 @@ ${applicant.guardianName ? `・氏名: ${applicant.guardianName}（続柄: ${app
       if (state.applicants.length === 0) {
         tbody.innerHTML = `
           <tr>
-            <td colspan="7" class="p-8 text-center text-slate-400">出願者データがありません。「.dat」ファイルを放り込むか、デモデータを作成してください。</td>
+            <td colspan="7" class="p-8 text-center text-slate-400">出願者データがありません。「.dat」や「.txt」ファイルを放り込むか、デモデータを作成してください。</td>
           </tr>
         `;
         return;
