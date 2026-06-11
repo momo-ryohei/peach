@@ -125,7 +125,7 @@
           <p class="font-bold flex items-center gap-1"><i data-lucide="info" class="w-4 h-4"></i> 出願完了までの重要なお手続きの流れ</p>
           <p>1. 下記フォームに必要事項を入力し、写真を登録してください。</p>
           <p>2. <strong>「出願を確定する」</strong>ボタンを押すと、自動的に暗号化された<strong>「暗号化出願ファイル (.dat)」</strong>が作成されてお使いの端末に保存されます。</p>
-          <p>3. 同時にメール作成画面が立ち上がりますので、<strong>ダウンロードされた「.datファイル」をメールに添付して、本校宛に必ず送信してください。</strong>メールの送信完了をもって、正式な出願受付となります。</p>
+          <p>3. 出願確定後に、<strong>ダウンロードされた「.datファイル」をメールに添付して、本校宛に手動（Gmail等も可）で送信してください。</strong>メール送信完了をもって、正式な出願受付となります。</p>
         </div>
 
         <form id="admission-form" onsubmit="handleFormSubmit(event)" class="space-y-8">
@@ -519,7 +519,7 @@
                 <i data-lucide="file-check" class="text-emerald-600"></i> 提出書類リアルタイム審査
               </h4>
               <div id="check-panel-empty" class="text-center py-10 text-slate-400 text-xs">
-                出願者一覧の「出願番号」をクリックすると、ここに提出資料のプレビューと個別審査ボードが表示されます。
+                出願者一覧 of 「出願番号」をクリックすると、ここに提出資料のプレビューと個別審査ボードが表示されます。
               </div>
               <div id="check-panel-content" class="hidden space-y-4 text-xs">
                 <!-- JSで書類やボタンを表示 -->
@@ -864,6 +864,36 @@
       }
     }
 
+    // コピペ用クリップボードコピー関数 (iFrame制約対応のフォールバック付き)
+    function copyToClipboard(valId, btnId) {
+      const copyVal = document.getElementById(valId);
+      if (!copyVal) return;
+      
+      copyVal.select();
+      copyVal.setSelectionRange(0, 99999); // モバイル対応
+
+      try {
+        const successful = document.execCommand('copy');
+        if (successful) {
+          showToast("コピーしました！", "success");
+          const btn = document.getElementById(btnId);
+          if (btn) {
+            const originalText = btn.innerHTML;
+            btn.innerHTML = "<i data-lucide='check' class='w-3.5 h-3.5'></i> コピー完了";
+            lucide.createIcons();
+            setTimeout(() => {
+              btn.innerHTML = originalText;
+              lucide.createIcons();
+            }, 2000);
+          }
+        } else {
+          showToast("コピーに失敗しました。手動で選択してコピーしてください。", "error");
+        }
+      } catch (err) {
+        showToast("コピーに失敗しました。手動でコピーしてください。", "error");
+      }
+    }
+
     function handleFormSubmit(event) {
       event.preventDefault();
       const name = document.getElementById("app-name").value.trim();
@@ -937,9 +967,8 @@
       state.applicants.push(newApplicant);
       saveToLocalStorage();
       downloadDatFile(newApplicant);
-      triggerApplicationEmail(newApplicant);
 
-      addAuditLog("DATA_MODIFY", `新規Web出願をローカル処理。出願番号: ${appId}, 氏名: ${name} / メール添付送出準備`, "info");
+      addAuditLog("DATA_MODIFY", `新規Web出願をローカル処理。出願番号: ${appId}, 氏名: ${name} / メール添付準備`, "info");
       showRegistrationCompleteModal(newApplicant);
       
       showApplicantSubView("status-check");
@@ -947,7 +976,18 @@
       document.getElementById("login-email").value = email;
     }
 
-    function triggerApplicationEmail(applicant) {
+    function downloadDatFile(applicant) {
+      const encryptedText = encryptData(JSON.stringify(applicant));
+      const blob = new Blob([encryptedText], { type: "text/plain;charset=utf-8" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `出願データ_${applicant.id}_${applicant.name.replace(/\s+/g, "")}.dat`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
+    function getEmailLinkData(applicant) {
       const schoolEmail = "t-itoryoh@e.osakamanabi.jp";
       const subject = `【web出願】出願データ送信（出願番号：${applicant.id} / 氏名：${applicant.name}）`;
       
@@ -957,9 +997,9 @@
 
 学校名：通信制の課程 受付事務局 殿
 
-【警告：送信するだけでは、まだ出願手続きは完了していません！】
+【注意：送信するだけでは、まだ出願手続きは完了していません！】
 ※同時にパソコンやスマートフォンにダウンロードされた暗号化出願ファイル（.dat）を、
-「必ずこのメールに添付した上で」送信ボタンを押してください。
+「必ずこのメールに添付した上で」送信してください。
 
 ■出願者情報
 ・出願番号: ${applicant.id}
@@ -977,62 +1017,149 @@ ${applicant.guardianName ? `・氏名: ${applicant.guardianName}（続柄: ${app
 ※添付ファイル名：出願データ_${applicant.id}_${applicant.name.replace(/\s+/g, "")}.dat
 --------------------------------------------------`;
 
-      const mailtoLink = `mailto:${schoolEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-      setTimeout(() => { window.location.href = mailtoLink; }, 800);
+      return {
+        email: schoolEmail,
+        subject: subject,
+        body: body,
+        mailto: `mailto:${schoolEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+      };
     }
 
-    function downloadDatFile(applicant) {
-      const encryptedText = encryptData(JSON.stringify(applicant));
-      const blob = new Blob([encryptedText], { type: "text/plain;charset=utf-8" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = `出願データ_${applicant.id}_${applicant.name.replace(/\s+/g, "")}.dat`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+    // 添付ファイル確認チェックボックスのトグル
+    function toggleConfirmBtn(checkbox) {
+      const confirmBtn = document.getElementById("btn-final-confirm");
+      if (checkbox.checked) {
+        confirmBtn.disabled = false;
+        confirmBtn.className = "flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold shadow-md transition cursor-pointer";
+      } else {
+        confirmBtn.disabled = true;
+        confirmBtn.className = "flex-1 py-2.5 bg-slate-300 text-slate-500 rounded-lg text-xs font-bold cursor-not-allowed transition";
+      }
     }
 
-    // --- ★ 出願完了案内モーダルのデザイン修正 (赤色強調・警告仕様) ---
+    // --- ★ 出願完了案内モーダルのデザイン修正 (コピペ用Gmailテンプレート & 添付忘れ防止付き) ---
     function showRegistrationCompleteModal(applicant) {
       const modal = document.getElementById("modal-container");
-      const body = document.getElementById("modal-body-content");
+      const bodyContent = document.getElementById("modal-body-content");
       modal.classList.remove("hidden");
 
-      body.innerHTML = `
-        <div class="text-center space-y-4">
-          <!-- 警告アイコン -->
-          <div class="mx-auto w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center shadow-inner">
-            <i data-lucide="alert-triangle" class="w-8 h-8 animate-pulse"></i>
+      const mailData = getEmailLinkData(applicant);
+
+      bodyContent.innerHTML = `
+        <div class="text-center space-y-4 max-w-lg mx-auto">
+          <!-- 警告アイコン (鼓動アニメーション付きで極めて目立たせる) -->
+          <div class="mx-auto w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center shadow-md animate-bounce">
+            <i data-lucide="alert-triangle" class="w-8 h-8"></i>
           </div>
           
           <!-- 最も目立つ警告メッセージ -->
-          <h4 class="text-2xl font-black text-red-600 tracking-tight">まだ出願は完了していません！</h4>
-          <p class="text-sm font-bold text-slate-700 bg-slate-100 py-2 rounded-lg">出願用のメール作成画面が立ち上がりました</p>
+          <h4 class="text-2xl font-black text-red-600 tracking-tight leading-tight">
+            まだ出願は完了していません！
+          </h4>
+          <p class="text-xs font-bold text-slate-500">
+            お手元の「出願データ (.dat)」をメールで本校に送信していただく必要があります。
+          </p>
           
-          <!-- 警告文と手順ボード -->
-          <div class="bg-red-50 border-2 border-red-200 p-5 rounded-xl text-left space-y-3 text-sm text-slate-800 shadow-sm">
-            <p class="font-bold text-red-800 flex items-center gap-1.5 border-b border-red-200 pb-2 text-base">
-              <i data-lucide="mail" class="w-5 h-5 text-red-600"></i>重要：最後にメールを送信してください
+          <!-- 手順ボード -->
+          <div class="bg-red-50 border border-red-200 p-4 rounded-xl text-left space-y-3 text-xs text-slate-800 shadow-sm">
+            <p class="font-bold text-red-800 flex items-center gap-1.5 border-b border-red-100 pb-1.5 text-sm">
+              <i data-lucide="mail-warning" class="w-4 h-4 text-red-600"></i>メール提出手順 (Gmail等も対応)
             </p>
-            <p class="font-semibold leading-relaxed">1. 端末に保存された暗号化ファイル（.dat）を確認します。</p>
-            <p class="text-slate-600 font-mono text-[11px] pl-3 py-2 bg-white rounded border border-red-100 break-all shadow-inner">ファイル名: 出願データ_${applicant.id}_${escapeHTML(applicant.name)}.dat</p>
-            <p class="font-semibold leading-relaxed">2. 自動で開いたメール作成画面に、<span class="text-red-600 font-bold underline bg-red-100 px-1">そのファイルを添付</span>して送信してください。</p>
+            
+            <div class="space-y-1">
+              <span class="font-bold text-slate-800">1. ダウンロードされた出願データを確認</span>
+              <p class="text-slate-600 pl-2">お使いの端末に以下のファイルが保存されていることを確認してください。</p>
+              <div class="bg-white p-2 rounded border border-red-100 font-mono font-bold text-indigo-700 text-center text-[10px] break-all select-all shadow-inner">
+                出願データ_${applicant.id}_${applicant.name.replace(/\s+/g, "")}.dat
+              </div>
+            </div>
+
+            <!-- ★★★ 【最重要】添付忘れ防止の超巨大・超強調警告枠 ★★★ -->
+            <div class="bg-yellow-100 border-l-4 border-yellow-500 p-3 rounded space-y-1">
+              <p class="font-bold text-yellow-800 flex items-center gap-1 text-[11px] animate-pulse">
+                <i data-lucide="paperclip" class="w-4 h-4"></i> 【重要・注意】ファイルの添付し忘れ防止！
+              </p>
+              <p class="text-slate-700 text-[10px] leading-relaxed font-semibold">
+                本文だけを送っても、<span class="text-red-600 underline">「.dat」出願ファイルが添付されていないと学校側でデータを読み込めず、未出願の扱い</span>となってしまいます。メール送信画面で必ずファイルを添付してください。
+              </p>
+            </div>
+
+            <div class="space-y-3 pt-1">
+              <span class="font-bold text-slate-800 block">2. メールを作成して送信する</span>
+              <p class="text-slate-600 pl-2">ご利用のメール環境に合わせて、以下の【方法A】または【方法B】を選択してください。</p>
+
+              <!-- 方法A: mailto -->
+              <div class="bg-white p-3 rounded-lg border border-slate-200 space-y-2">
+                <div class="flex items-center gap-1">
+                  <span class="inline-block bg-indigo-100 text-indigo-800 font-bold px-1.5 py-0.5 rounded text-[10px]">方法 A</span>
+                  <span class="text-slate-700 font-semibold text-[11px]">メールアプリ（Outlook / Mail等）を自動起動</span>
+                </div>
+                <button onclick="window.location.href='${mailData.mailto}'" class="w-full py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-bold flex items-center justify-center gap-1 shadow-sm transition">
+                  <i data-lucide="mail" class="w-3.5 h-3.5"></i> メール作成アプリを開く
+                </button>
+              </div>
+
+              <!-- 方法B: Gmailなどのコピペ欄 -->
+              <div class="bg-white p-3 rounded-lg border border-slate-200 space-y-2">
+                <div class="flex items-center gap-1">
+                  <span class="inline-block bg-teal-100 text-teal-800 font-bold px-1.5 py-0.5 rounded text-[10px]">方法 B</span>
+                  <span class="text-slate-700 font-semibold text-[11px]">Gmail（アプリ/ブラウザ）等のコピペテンプレート</span>
+                </div>
+                <p class="text-slate-500 text-[10px] pl-1">
+                  自動でアプリが開かない方やGmail等の方は、以下の内容をコピーしてメール作成画面に貼り付けてください。
+                </p>
+
+                <div class="space-y-2 pt-1 text-[10px]">
+                  <!-- 宛先 -->
+                  <div class="space-y-0.5">
+                    <span class="font-semibold text-slate-600">宛先メールアドレス</span>
+                    <div class="flex gap-1">
+                      <input type="text" id="tmpl-email" readonly value="${mailData.email}" class="flex-grow px-2 py-1 bg-slate-50 border rounded text-[10px] font-mono select-all">
+                      <button onclick="copyToClipboard('tmpl-email', 'btn-copy-email')" id="btn-copy-email" class="px-2.5 py-1 bg-slate-800 text-white rounded text-[10px] font-bold flex items-center gap-0.5 hover:bg-slate-700 shrink-0">
+                        <i data-lucide="copy" class="w-3 h-3"></i> コピー
+                      </button>
+                    </div>
+                  </div>
+                  <!-- 件名 -->
+                  <div class="space-y-0.5">
+                    <span class="font-semibold text-slate-600">件名</span>
+                    <div class="flex gap-1">
+                      <input type="text" id="tmpl-sub" readonly value="${escapeHTML(mailData.subject)}" class="flex-grow px-2 py-1 bg-slate-50 border rounded text-[10px] truncate font-mono select-all">
+                      <button onclick="copyToClipboard('tmpl-sub', 'btn-copy-sub')" id="btn-copy-sub" class="px-2.5 py-1 bg-slate-800 text-white rounded text-[10px] font-bold flex items-center gap-0.5 hover:bg-slate-700 shrink-0">
+                        <i data-lucide="copy" class="w-3 h-3"></i> コピー
+                      </button>
+                    </div>
+                  </div>
+                  <!-- 本文 -->
+                  <div class="space-y-0.5">
+                    <div class="flex justify-between items-center">
+                      <span class="font-semibold text-slate-600">本文</span>
+                      <button onclick="copyToClipboard('tmpl-body', 'btn-copy-body')" id="btn-copy-body" class="px-2.5 py-1 bg-slate-800 text-white rounded text-[10px] font-bold flex items-center gap-0.5 hover:bg-slate-700 shrink-0">
+                        <i data-lucide="copy" class="w-3 h-3"></i> 本文を丸ごとコピー
+                      </button>
+                    </div>
+                    <textarea id="tmpl-body" readonly class="w-full h-24 p-2 bg-slate-50 border rounded text-[10px] font-mono leading-relaxed resize-none select-all">${escapeHTML(mailData.body)}</textarea>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <!-- 確認情報 -->
-          <div class="p-3 bg-slate-50 rounded-lg text-xs space-y-1 text-left border border-slate-200">
-            <div><strong>お名前:</strong> ${escapeHTML(applicant.name)}</div>
-            <div><strong>出願ID:</strong> <span class="font-mono font-bold">${applicant.id}</span></div>
-            <div><strong>志願区分:</strong> ${escapeHTML(applicant.faculty)}</div>
-          </div>
+          <!-- ★★★ 添付忘れを物理的に「確認」させる誓約チェックボックス ★★★ -->
+          <label class="flex items-center gap-2.5 cursor-pointer bg-red-100 hover:bg-red-200 p-3 rounded-lg border border-red-300 text-left transition duration-200">
+            <input type="checkbox" id="chk-attachment-confirm" onchange="toggleConfirmBtn(this)" class="h-5 w-5 text-red-600 border-red-300 rounded focus:ring-red-500 shrink-0">
+            <span class="text-[11px] font-black text-red-700 leading-snug">
+              「.dat」出願ファイルをメールに間違いなく添付した、またはこれから添付することを確認・了承しました。<span class="text-red-600 font-extrabold">*必須</span>
+            </span>
+          </label>
 
           <!-- アクションボタン -->
           <div class="flex gap-3 pt-2">
             <button onclick="downloadDatFile(JSON.parse(decryptData('${encryptData(JSON.stringify(applicant))}')))" class="flex-1 py-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-lg text-xs font-bold flex items-center justify-center gap-1 shadow-sm transition">
-              <i data-lucide="download" class="w-4 h-4"></i> ファイル再保存
+              <i data-lucide="download" class="w-4 h-4"></i> ファイルを再保存
             </button>
-            <button onclick="closeModal(); queryApplicationStatus();" class="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold shadow-md transition">
-              確認して次へ進む
+            <button id="btn-final-confirm" disabled onclick="closeModal(); queryApplicationStatus();" class="flex-1 py-2.5 bg-slate-300 text-slate-500 rounded-lg text-xs font-bold cursor-not-allowed transition">
+              確認して進む（チェック必須）
             </button>
           </div>
         </div>
@@ -1154,7 +1281,7 @@ ${applicant.guardianName ? `・氏名: ${applicant.guardianName}（続柄: ${app
 
       if (!applicant.feePaid) {
         html = `
-          <div class="bg-amber-100 p-2 rounded-lg text-amber-700"><i data-lucide="alert-circle" class="w-6 h-6"></i></div>
+          <div class="bg-amber-100 p-2 rounded-lg text-amber-700"><i data-lucide="alert-circle" class="w-6 h-6 animate-pulse"></i></div>
           <div class="space-y-1">
             <h5 class="font-bold text-slate-800 text-sm">受験料の確認およびメール送信照合中</h5>
             <p class="text-xs text-slate-600">お送りいただいたメールデータ（.datファイル）および「領収証控」の情報を校内事務局が照合確認中です。確認が取れましたら次のステップに進みます。</p>
