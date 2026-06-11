@@ -1,0 +1,2029 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>web出願システム</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- SheetJS (Excel処理用ライブラリ - 完全にブラウザローカルで動作するため外部送信なし) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --primary-blue: #1e3a8a;
+      --secondary-teal: #0f766e;
+    }
+    body {
+      font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif;
+      background-color: #f8fafc;
+    }
+    .custom-shadow {
+      box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05), 0 2px 8px -1px rgba(0, 0, 0, 0.03);
+    }
+    .status-badge {
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- ヘッダー -->
+  <header class="bg-indigo-900 text-white shadow-md">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+      <div class="flex items-center gap-3">
+        <div class="bg-white/10 p-2 rounded-lg">
+          <i id="header-logo-icon" data-lucide="shield" class="w-8 h-8 text-indigo-300"></i>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold tracking-wider">web出願システム</h1>
+          <p class="text-xs text-indigo-200">完全ローカルExcel管理モデル (暗号化ファイル集約方式)</p>
+        </div>
+      </div>
+      
+      <!-- ポータル切り替え & セッション情報 -->
+      <div class="flex items-center gap-4">
+        <div id="session-timer-container" class="hidden bg-red-950/40 border border-red-500/30 text-red-200 px-3 py-1.5 rounded-lg text-xs flex items-center gap-2">
+          <span class="animate-pulse inline-block w-2 h-2 rounded-full bg-red-500"></span>
+          <span id="session-timer">自動切断まで 15分00秒</span>
+        </div>
+        <!-- 管理者用シークレットURLでのみ表示されるナビゲーション -->
+        <nav id="portal-nav" class="hidden flex rounded-lg bg-indigo-950/60 p-1 border border-indigo-700/50">
+          <button id="nav-btn-applicant" onclick="switchPortal('applicant')" class="px-4 py-1.5 rounded-md text-sm font-medium transition-all duration-200 bg-white text-indigo-950 shadow-sm">
+            志願者ポータル
+          </button>
+          <button id="nav-btn-admin" onclick="switchPortal('admin')" class="px-4 py-1.5 rounded-md text-sm font-medium transition-all duration-200 text-indigo-200 hover:text-white flex items-center gap-1">
+            <i data-lucide="lock" class="w-4 h-4"></i> 管理者ログイン
+          </button>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-grow max-w-7xl w-full mx-auto p-4 md:p-6">
+    <!-- ==========================================
+         志願者ポータル
+         ========================================== -->
+    <section id="applicant-portal" class="portal-section active space-y-6">
+      
+      <!-- ヒーロー説明エリア -->
+      <div class="portal-hero bg-gradient-to-r from-indigo-800 to-indigo-950 text-white rounded-2xl p-6 md:p-8 custom-shadow relative overflow-hidden">
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.05),transparent)]"></div>
+        <div class="relative z-10 max-w-2xl space-y-3">
+          <span class="bg-indigo-500/30 text-indigo-300 border border-indigo-400/20 text-xs px-3 py-1 rounded-full font-semibold uppercase tracking-wider">出願受付中</span>
+          <h2 class="text-2xl md:text-3xl font-bold">令和8年度 入学者選抜 オンライン出願ポータル</h2>
+          <p class="text-indigo-200 text-sm md:text-base leading-relaxed">
+            本システムは、個人情報漏洩を徹底的に防ぐ安全設計のもとで運用されています。出願手続きや進捗状況の確認を安全に行うことができます。
+          </p>
+        </div>
+      </div>
+
+      <!-- メニューカード（切り替えスイッチ） -->
+      <div class="portal-cards-grid grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- 新規出願カード -->
+        <button onclick="showApplicantSubView('apply-form')" class="group text-left bg-white border border-slate-200 p-6 rounded-2xl custom-shadow hover:border-indigo-500 transition-all duration-300 transform hover:-translate-y-1">
+          <div class="flex items-start justify-between">
+            <div class="bg-indigo-50 text-indigo-600 p-4 rounded-xl group-hover:bg-indigo-600 group-hover:text-white transition-all">
+              <i data-lucide="file-text" class="w-8 h-8"></i>
+            </div>
+            <span class="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full">約 10 分で完了</span>
+          </div>
+          <h3 class="text-lg font-bold text-slate-800 mt-4 group-hover:text-indigo-900">1. 新規出願を行う</h3>
+          <p class="text-sm text-slate-500 mt-2">志願者情報、保護者連絡先、写真、受験料の振込領収書をアップロードし、最後にメールで出願ファイルを送付して出願を完了します。</p>
+        </button>
+
+        <!-- 状況照会カード -->
+        <button onclick="showApplicantSubView('status-check')" class="group text-left bg-white border border-slate-200 p-6 rounded-2xl custom-shadow hover:border-teal-500 transition-all duration-300 transform hover:-translate-y-1">
+          <div class="flex items-start justify-between">
+            <div class="bg-teal-50 text-teal-600 p-4 rounded-xl group-hover:bg-teal-600 group-hover:text-white transition-all">
+              <i data-lucide="search" class="w-8 h-8"></i>
+            </div>
+            <span class="text-xs font-semibold text-teal-600 bg-teal-50 px-2.5 py-1 rounded-full">リアルタイム反映</span>
+          </div>
+          <h3 class="text-lg font-bold text-slate-800 mt-4 group-hover:text-teal-900">2. 出願状況・合否を確認する</h3>
+          <p class="text-sm text-slate-500 mt-2">提出されたメールデータをもとに事務局で処理された、最新の進捗状況（受験票のダウンロード、合格判定の通知）を安全に確認できます。</p>
+        </button>
+      </div>
+
+      <!-- A. 新規出願フォーム -->
+      <div id="subview-apply-form" class="hidden bg-white rounded-2xl border border-slate-200 p-6 md:p-8 custom-shadow space-y-6">
+        <div class="flex justify-between items-center border-b border-slate-100 pb-4">
+          <h3 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+            <i data-lucide="file-text" class="text-indigo-600"></i> 新規Web出願フォーム
+          </h3>
+          <button onclick="showApplicantSubView('menu')" class="text-slate-400 hover:text-slate-600 flex items-center gap-1 text-sm">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i> メニューに戻る
+          </button>
+        </div>
+
+        <!-- 運用上の案内ボード -->
+        <div class="bg-blue-50 border border-blue-100 text-blue-900 p-4 rounded-xl text-xs space-y-2">
+          <p class="font-bold flex items-center gap-1"><i data-lucide="info" class="w-4 h-4"></i> 出願完了までの重要なお手続きの流れ</p>
+          <p>1. 下記フォームに必要事項を入力し、写真を登録してください。</p>
+          <p>2. <strong>「出願を確定する」</strong>ボタンを押すと、自動的に暗号化された<strong>「暗号化出願ファイル (.dat)」</strong>が作成されてお使いの端末に保存されます。</p>
+          <p>3. 同時にメール作成画面が立ち上がりますので、<strong>ダウンロードされた「.datファイル」をメールに添付して、本校宛に必ず送信してください。</strong>メールの送信完了をもって、正式な出願受付となります。</p>
+        </div>
+
+        <form id="admission-form" onsubmit="handleFormSubmit(event)" class="space-y-8">
+          <!-- 志願者情報セクション -->
+          <div class="space-y-4">
+            <h4 class="text-md font-bold text-slate-700 border-l-4 border-indigo-600 pl-2">1. 志願者基本情報</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label class="block text-sm font-semibold text-slate-600 mb-1">氏名 (漢字) <span class="text-red-500">*</span></label>
+                <input type="text" id="app-name" required placeholder="教育 太郎" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+              </div>
+              <div>
+                <label class="block text-sm font-semibold text-slate-600 mb-1">フリガナ <span class="text-red-500">*</span></label>
+                <input type="text" id="app-kana" required placeholder="キョウイク タロウ" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+              </div>
+              <div>
+                <label class="block text-sm font-semibold text-slate-600 mb-1">生年月日 (半角数字8桁) <span class="text-red-500">*</span></label>
+                <input type="text" id="app-birth" required pattern="\d{8}" maxlength="8" placeholder="例：20100401" oninput="checkAge()" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                <span class="text-[10px] text-slate-400">西暦4桁＋月2桁＋日2桁で入力してください。18歳未満の場合は保護者欄が必須となります。</span>
+              </div>
+              <div>
+                <label class="block text-sm font-semibold text-slate-600 mb-1">志願区分 <span class="text-red-500">*</span></label>
+                <select id="app-faculty" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                  <option value="">選択してください</option>
+                  <option value="編入学">編入学</option>
+                  <option value="転入学">転入学</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-semibold text-slate-600 mb-1">志望する課程 <span class="text-red-500">* (間違い防止の意思確認)</span></label>
+                <select id="app-course" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                  <option value="">選択してください</option>
+                  <option value="通信制の課程">通信制の課程</option>
+                </select>
+                <span class="text-[10px] text-amber-600">※本校の通信制の課程への志望であることをご確認の上、選択してください。</span>
+              </div>
+              <div>
+                <label class="block text-sm font-semibold text-slate-600 mb-1">電話番号 <span class="text-red-500">*</span></label>
+                <input type="tel" id="app-phone" required placeholder="090-0000-0000" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+              </div>
+              <div>
+                <label class="block text-sm font-semibold text-slate-600 mb-1">前籍校 学校名 <span class="text-red-500">*</span></label>
+                <input type="text" id="app-prev-school" required placeholder="〇〇高等学校" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+              </div>
+              <div>
+                <label class="block text-sm font-semibold text-slate-600 mb-1">前籍校 課程 <span class="text-red-500">*</span></label>
+                <select id="app-prev-course" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                  <option value="">選択してください</option>
+                  <option value="全日制">全日制</option>
+                  <option value="定時制">定時制</option>
+                  <option value="通信制">通信制</option>
+                </select>
+              </div>
+              <div class="md:col-span-2">
+                <label class="block text-sm font-semibold text-slate-600 mb-1">メールアドレス <span class="text-red-500">* (状況照会時およびメール送付のキーになります)</span></label>
+                <input type="email" id="app-email" required placeholder="taro@example.com" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+              </div>
+            </div>
+          </div>
+
+          <!-- 保護者情報セクション -->
+          <div id="guardian-section" class="space-y-4">
+            <div class="flex items-center gap-2">
+              <h4 class="text-md font-bold text-slate-700 border-l-4 border-indigo-600 pl-2">2. 保護者情報</h4>
+              <span class="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-bold">必須 (18歳未満)</span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label class="block text-sm font-semibold text-slate-600 mb-1">保護者氏名 <span class="text-red-500">*</span></label>
+                <input type="text" id="app-guard-name" required placeholder="教育 一郎" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+              </div>
+              <div>
+                <label class="block text-sm font-semibold text-slate-600 mb-1">続柄 <span class="text-red-500">*</span></label>
+                <select id="app-guard-relation" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                  <option value="">選択してください</option>
+                  <option value="父">父</option>
+                  <option value="母">母</option>
+                  <option value="祖父">祖父</option>
+                  <option value="祖母">祖母</option>
+                  <option value="その他">その他</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-semibold text-slate-600 mb-1">フリガナ <span class="text-red-500">*</span></label>
+                <input type="text" id="app-guard-kana" required placeholder="キョウイク イチロウ" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+              </div>
+              <div>
+                <label class="block text-sm font-semibold text-slate-600 mb-1">緊急連絡先電話番号 <span class="text-red-500">*</span></label>
+                <input type="tel" id="app-guard-phone" required placeholder="090-1111-1111" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+              </div>
+            </div>
+          </div>
+
+          <!-- 書類アップロードおよび事前送付確認セクション -->
+          <div class="space-y-4">
+            <h4 class="text-md font-bold text-slate-700 border-l-4 border-indigo-600 pl-2">3. 証明書類の確認およびアップロード</h4>
+            
+            <div class="space-y-6">
+              <!-- 成績単位修得証明書の送付状況（全幅で表示） -->
+              <div class="border border-slate-200 bg-slate-50 rounded-xl p-4">
+                <div class="space-y-3">
+                  <span class="block text-sm font-bold text-slate-700">① 成績単位修得証明書について</span>
+                  <p class="text-xs text-slate-500 leading-relaxed">
+                    成績単位修得証明書は、個人情報安全管理のため、Webからのファイル添付を行いません。現在または以前に在籍した学校から、直接本校へ郵送等で送付される形となります。
+                  </p>
+                  <label class="flex items-start gap-2 cursor-pointer mt-2 bg-white p-2.5 rounded border border-indigo-200 transition hover:bg-indigo-50">
+                    <input type="checkbox" id="confirm-transcript-sent" required class="mt-1 h-4 w-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500">
+                    <span class="text-xs font-semibold text-slate-700 leading-tight">現在(または以前)在籍した学校より、本校宛に事前に送付済み、または送付手配を行ったことを確認しました。<span class="text-red-500">*</span></span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- 顔写真と領収書（2カラムグリッド） -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- 顔写真 -->
+                <div class="border border-dashed border-slate-300 rounded-xl p-4 text-center hover:bg-slate-50 transition flex flex-col justify-between min-h-[180px]">
+                  <div>
+                    <span class="block text-sm font-bold text-slate-700 mb-1">② 志願者顔写真</span>
+                    <p class="text-xs text-slate-400 mb-3">正面上半身・背景なし</p>
+                  </div>
+                  <div>
+                    <input type="file" id="file-photo" accept="image/*" onchange="previewUpload(this, 'photo')" class="hidden">
+                    <button type="button" onclick="triggerFileInput('file-photo')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-4 py-2 rounded-lg text-xs font-semibold">ファイル選択</button>
+                    <div id="preview-photo-container" class="hidden mt-3 space-y-2">
+                      <img id="preview-photo" class="mx-auto w-24 h-32 object-cover border rounded" src="">
+                      <button type="button" onclick="removeUploadedFile('photo')" class="text-red-500 text-xs flex items-center justify-center gap-1 mx-auto"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i>削除</button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 振込領収書 -->
+                <div class="border border-dashed border-slate-300 rounded-xl p-4 text-center hover:bg-slate-50 transition flex flex-col justify-between min-h-[180px]">
+                  <div>
+                    <span class="block text-sm font-bold text-slate-700 mb-1">③ 受験料振込領収書</span>
+                    <p class="text-xs text-slate-400 mb-3">ATM控、ネットバンキング画面可</p>
+                  </div>
+                  <div>
+                    <input type="file" id="file-receipt" accept="image/*,.pdf" onchange="previewUpload(this, 'receipt')" class="hidden">
+                    <button type="button" onclick="triggerFileInput('file-receipt')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-4 py-2 rounded-lg text-xs font-semibold">ファイル選択</button>
+                    <div id="preview-receipt-container" class="hidden mt-3 space-y-2 text-xs">
+                      <div class="flex items-center gap-1 justify-center text-slate-600">
+                        <i data-lucide="file-check" class="w-4 h-4 text-emerald-500"></i>
+                        <span id="preview-receipt-name" class="truncate max-w-[150px]"></span>
+                      </div>
+                      <button type="button" onclick="removeUploadedFile('receipt')" class="text-red-500 text-xs flex items-center justify-center gap-1 mx-auto"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i>削除</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="pt-4 border-t border-slate-100 flex justify-end gap-3">
+            <button type="button" onclick="showApplicantSubView('menu')" class="px-6 py-2 border border-slate-300 rounded-lg text-sm text-slate-600 hover:bg-slate-50">キャンセル</button>
+            <button type="submit" class="px-8 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold shadow-sm">出願を確定する</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- B. 出願状況照会 -->
+      <div id="subview-status-check" class="hidden bg-white rounded-2xl border border-slate-200 p-6 md:p-8 custom-shadow space-y-6">
+        <div class="flex justify-between items-center border-b border-slate-100 pb-4">
+          <h3 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+            <i data-lucide="search" class="text-teal-600"></i> 出願照会・合否確認
+          </h3>
+          <button onclick="showApplicantSubView('menu')" class="text-slate-400 hover:text-slate-600 flex items-center gap-1 text-sm">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i> メニューに戻る
+          </button>
+        </div>
+
+        <!-- 照会ログインフォーム -->
+        <div id="status-login-container" class="max-w-md mx-auto py-8 space-y-4">
+          <p class="text-sm text-slate-500 text-center">出願時に登録した「氏名」と「メールアドレス」を入力してください。</p>
+          <div class="space-y-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">氏名 (漢字)</label>
+              <input type="text" id="login-name" placeholder="教育 太郎" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">メールアドレス</label>
+              <input type="email" id="login-email" placeholder="taro@example.com" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm">
+            </div>
+            <button onclick="queryApplicationStatus()" class="w-full py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-semibold shadow">状況を確認する</button>
+            <p id="login-error" class="hidden text-xs text-red-500 text-center font-semibold">一致するデータが見つかりませんでした。</p>
+          </div>
+        </div>
+
+        <!-- 照会結果表示コンテナ (初期非表示) -->
+        <div id="status-result-container" class="hidden space-y-6">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- 志願者基本カード -->
+            <div class="bg-slate-50 p-5 rounded-xl border border-slate-100 flex flex-col items-center text-center">
+              <img id="res-photo" class="w-24 h-32 object-cover border-2 border-white shadow-md rounded mb-4" src="">
+              <h4 id="res-name" class="text-lg font-bold text-slate-800"></h4>
+              <p id="res-app-id" class="text-xs text-indigo-600 font-mono font-bold mt-1"></p>
+              
+              <div class="w-full border-t border-slate-200 my-4"></div>
+              
+              <div class="w-full text-left space-y-2 text-xs">
+                <div class="flex justify-between"><span class="text-slate-400">志願区分:</span><span id="res-faculty" class="font-semibold text-slate-700"></span></div>
+                <div class="flex justify-between"><span class="text-slate-400">志望課程:</span><span id="res-course" class="font-semibold text-slate-700"></span></div>
+                <div class="flex justify-between"><span class="text-slate-400">前籍校:</span><span id="res-prev-school" class="font-semibold text-slate-700 truncate max-w-[120px] text-right"></span></div>
+                <div class="flex justify-between"><span class="text-slate-400">生年月日:</span><span id="res-birth" class="font-semibold text-slate-700"></span></div>
+                <div class="flex justify-between"><span class="text-slate-400">出願日:</span><span id="res-date" class="font-semibold text-slate-700"></span></div>
+              </div>
+            </div>
+
+            <!-- 保護者情報カード -->
+            <div class="bg-slate-50 p-5 rounded-xl border border-slate-100 space-y-4">
+              <h4 class="text-sm font-bold text-slate-700 border-b border-slate-200 pb-2">保護者連絡先情報</h4>
+              <div class="space-y-2 text-xs">
+                <div><span class="text-slate-400">氏名:</span> <span id="res-guard-name" class="font-semibold text-slate-700"></span></div>
+                <div><span class="text-slate-400">続柄:</span> <span id="res-guard-relation" class="font-semibold text-slate-700"></span></div>
+                <div><span class="text-slate-400">緊急電話番号:</span> <span id="res-guard-phone" class="font-semibold text-slate-700"></span></div>
+              </div>
+              <div class="p-3 bg-teal-50 border border-teal-100 rounded-lg text-[11px] text-teal-800">
+                本システムは、保護者同意署名の代替として「保護者緊急連絡先」を必須とし、確認のための認証ログを取得しています。
+              </div>
+            </div>
+
+            <!-- 進行フロータイムライン -->
+            <div class="bg-slate-50 p-5 rounded-xl border border-slate-100 flex flex-col justify-between">
+              <h4 class="text-sm font-bold text-slate-700 border-b border-slate-200 pb-2 mb-4">出願プロセス進捗</h4>
+              <div class="timeline-steps flex flex-col gap-4 relative pl-4 text-xs">
+                <!-- 線 -->
+                <div class="absolute left-[7px] top-2 bottom-2 w-0.5 bg-slate-200 z-0">
+                  <div class="timeline-progress-line w-full bg-teal-500 transition-all duration-500" style="height: 0%;"></div>
+                </div>
+                
+                <div id="step-applied" class="relative flex items-center gap-3 z-10">
+                  <div class="step-num w-4 h-4 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-[10px] font-bold">1</div>
+                  <span>Web出願(メール送信)</span>
+                </div>
+                <div id="step-fee" class="relative flex items-center gap-3 z-10">
+                  <div class="step-num w-4 h-4 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-[10px] font-bold">2</div>
+                  <span>受験料確認</span>
+                </div>
+                <div id="step-review" class="relative flex items-center gap-3 z-10">
+                  <div class="step-num w-4 h-4 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-[10px] font-bold">3</div>
+                  <span>書類審査</span>
+                </div>
+                <div id="step-ticket" class="relative flex items-center gap-3 z-10">
+                  <div class="step-num w-4 h-4 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-[10px] font-bold">4</div>
+                  <span>受験票発行</span>
+                </div>
+                <div id="step-result" class="relative flex items-center gap-3 z-10">
+                  <div class="step-num w-4 h-4 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-[10px] font-bold">5</div>
+                  <span>合否結果</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 個別指示案内ボード -->
+          <div id="instruction-card" class="bg-indigo-50 border border-indigo-100 p-5 rounded-xl flex items-start gap-4">
+            <!-- JSで動的に書き換えます -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         管理者・事務局ダッシュボード
+         ========================================== -->
+    <section id="admin-dashboard" class="portal-section hidden space-y-6">
+      
+      <!-- A. 未ログイン時：セキュアログイン画面 -->
+      <div id="admin-login-view" class="max-w-md mx-auto bg-white rounded-2xl border border-slate-200 p-6 md:p-8 custom-shadow space-y-6 mt-10">
+        <div class="text-center space-y-2">
+          <div class="mx-auto w-12 h-12 rounded-xl bg-red-50 text-red-600 flex items-center justify-center">
+            <i data-lucide="shield-alert" class="w-6 h-6"></i>
+          </div>
+          <h3 class="text-lg font-bold text-slate-800">管理者セキュリティ認証</h3>
+          <p class="text-xs text-slate-400">デモ用パスワード：<strong class="font-mono text-indigo-600">admin1234</strong></p>
+        </div>
+
+        <div class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">管理者セキュリティパスワード</label>
+            <input type="password" id="admin-password-input" placeholder="••••••••" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 text-sm">
+          </div>
+          <button onclick="handleAdminLogin(document.getElementById('admin-password-input').value)" class="w-full py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-sm font-semibold transition shadow">認証を実行する</button>
+        </div>
+      </div>
+
+      <!-- B. ログイン後：高機能セキュアダッシュボード -->
+      <div id="admin-dashboard-view" class="hidden space-y-6">
+        
+        <!-- 上部：セキュリティポイントアピール -->
+        <div class="bg-slate-800 text-white rounded-2xl p-6 custom-shadow grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+          <div class="md:col-span-2 space-y-1">
+            <h3 class="text-md font-bold flex items-center gap-1.5 text-emerald-400">
+              <i data-lucide="shield-check"></i> セキュリティ運用モード
+            </h3>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              外部のクラウドやスプレッドシートへの通信を一切行わず、お使いのパソコンのブラウザメモリのみで暗号化出願ファイル（.dat）の復号・結合、およびExcelへの相互変換を行います。
+            </p>
+          </div>
+          <div class="flex flex-col gap-1 text-xs">
+            <span class="text-slate-400">セキュリティ強度:</span>
+            <span class="text-emerald-400 font-bold flex items-center gap-1"><i data-lucide="lock" class="w-3.5 h-3.5"></i> AES-256規格想定暗号キー</span>
+          </div>
+          <div class="flex flex-col gap-1 text-xs">
+            <span class="text-slate-400">操作ログポリシー:</span>
+            <span class="text-indigo-300 font-bold flex items-center gap-1"><i data-lucide="activity" class="w-3.5 h-3.5"></i> 監査用にログを自動保存中 (最大500件)</span>
+          </div>
+        </div>
+
+        <!-- 志願者ファイルのドラッグ＆ドロップ回収エリア -->
+        <div class="bg-indigo-50 border-2 border-dashed border-indigo-300 rounded-2xl p-6 text-center space-y-3 shadow-inner">
+          <div class="mx-auto w-12 h-12 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center">
+            <i data-lucide="file-down" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <h4 class="text-sm font-bold text-slate-800">回収した暗号化出願ファイル（.dat）の一括取り込み</h4>
+            <p class="text-xs text-slate-500 mt-1">志願者からメール等で送られてきた暗号化出願ファイルを、まとめてここにドラッグ＆ドロップするだけで自動復号・結合されます。</p>
+          </div>
+          
+          <!-- ドラッグドロップ領域 -->
+          <div id="drop-zone" class="border border-indigo-200 bg-white rounded-xl p-6 text-slate-400 text-xs hover:bg-indigo-100/50 hover:text-indigo-900 transition cursor-pointer flex flex-col items-center justify-center gap-2 max-w-xl mx-auto">
+            <i data-lucide="upload-cloud" class="w-8 h-8 text-indigo-500"></i>
+            <span class="font-semibold">ここに回収した「.dat」ファイルをまとめてドラッグ＆ドロップ</span>
+            <span>またはクリックしてファイルを選択（複数同時選択可）</span>
+            <input type="file" id="dat-file-picker" accept=".dat" multiple onchange="handleDatFilesSelected(event)" class="hidden">
+          </div>
+        </div>
+
+        <!-- アクションボタン群（Excel入出力、全リセット） -->
+        <div class="flex flex-wrap items-center justify-between gap-4 bg-white p-4 rounded-xl border border-slate-200 custom-shadow">
+          <div class="flex flex-wrap items-center gap-2">
+            <!-- Excelエクスポート -->
+            <button onclick="exportToExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow transition">
+              <i data-lucide="download"></i> Excel一覧出力
+            </button>
+            
+            <!-- Excelインポート -->
+            <label class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow cursor-pointer transition">
+              <i data-lucide="upload"></i> Excel一括インポート (上書き用)
+              <input type="file" id="excel-import-file" accept=".xlsx,.xls" onchange="importFromExcel(event)" class="hidden">
+            </label>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button onclick="generateMockData()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1">
+              <i data-lucide="plus-circle" class="w-4 h-4"></i> デモ用模擬データ追加
+            </button>
+            <button onclick="resetSystem()" class="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1">
+              <i data-lucide="refresh-cw" class="w-4 h-4"></i> システム全体リセット
+            </button>
+          </div>
+        </div>
+
+        <!-- メインコンテンツ領域 (2カラム) -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          <!-- 左2カラム: 志願者管理リスト -->
+          <div class="lg:col-span-2 bg-white rounded-xl border border-slate-200 custom-shadow overflow-hidden">
+            <div class="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+              <h4 class="font-bold text-slate-800 text-sm flex items-center gap-2">
+                <i data-lucide="users" class="text-indigo-600"></i> 出願者管理一覧 (<span id="applicant-count">0</span>名)
+              </h4>
+              <p class="text-[11px] text-slate-400">出願番号クリックで、志願者写真や領収書などの提出資料をチェックできます</p>
+            </div>
+            
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr class="bg-slate-100/70 text-slate-600 border-b border-slate-200">
+                    <th class="p-3 font-semibold">出願番号</th>
+                    <th class="p-3 font-semibold">氏名 (フリガナ)</th>
+                    <th class="p-3 font-semibold">志願区分</th>
+                    <th class="p-3 font-semibold">受験料</th>
+                    <th class="p-3 font-semibold">書類審査</th>
+                    <th class="p-3 font-semibold">受験番号</th>
+                    <th class="p-3 font-semibold">操作</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-table-body" class="divide-y divide-slate-100">
+                  <!-- JSで描画します -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- 右1カラム: 監査ログ & 書類チェック詳細 -->
+          <div class="space-y-6">
+            
+            <!-- ① 選択された志願者の提出書類審査・個別対応ボード -->
+            <div id="document-check-panel" class="bg-white rounded-xl border border-slate-200 custom-shadow p-5 space-y-4">
+              <h4 class="font-bold text-slate-800 text-sm border-b border-slate-100 pb-2 flex items-center gap-1.5">
+                <i data-lucide="file-check" class="text-emerald-600"></i> 提出書類リアルタイム審査
+              </h4>
+              <div id="check-panel-empty" class="text-center py-10 text-slate-400 text-xs">
+                出願者一覧の「出願番号」をクリックすると、ここに提出資料のプレビューと個別審査ボードが表示されます。
+              </div>
+              <div id="check-panel-content" class="hidden space-y-4 text-xs">
+                <!-- JSで書類やボタンを表示 -->
+              </div>
+            </div>
+
+            <!-- ② セキュリティ監査ログ -->
+            <div class="bg-white rounded-xl border border-slate-200 custom-shadow p-5 space-y-3">
+              <h4 class="font-bold text-slate-800 text-sm border-b border-slate-100 pb-2 flex items-center justify-between">
+                <span class="flex items-center gap-1.5"><i data-lucide="activity" class="text-red-500"></i> セキュリティ監査ログ</span>
+                <span class="text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-bold">自動証跡</span>
+              </h4>
+              <div class="overflow-y-auto max-h-[250px] space-y-2 pr-1 font-mono text-[10px]" id="audit-log-container">
+                <!-- 監査ログが自動的に追加されます -->
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <!-- トースト通知システム -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-10 opacity-0 pointer-events-none transition-all duration-300 bg-slate-900 text-white rounded-xl p-4 shadow-lg flex items-center gap-3">
+    <div id="toast-icon-container" class="text-emerald-400">
+      <i id="toast-icon" data-lucide="check-circle-2" class="w-5 h-5"></i>
+    </div>
+    <div id="toast-message" class="text-xs font-semibold"></div>
+  </div>
+
+  <!-- 受験票・合否通知の模擬ポップアップモーダル -->
+  <div id="modal-container" class="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+    <div class="bg-white rounded-2xl border border-slate-200 p-6 max-w-md w-full shadow-2xl relative space-y-4 m-4">
+      <button onclick="closeModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+      <div id="modal-body-content">
+        <!-- モーダル中身はJSで書き換え -->
+      </div>
+    </div>
+  </div>
+
+  <footer class="bg-slate-100 border-t border-slate-200 py-4 text-center text-xs text-slate-400">
+    &copy; 2026 web出願システム. All Rights Reserved. ブラウザローカル検証環境
+  </footer>
+
+  <!-- ==========================================================================
+       Web出願・書類チェック 模擬システム - スクリプト
+       ========================================================================== -->
+  <script>
+    // --- 状態管理オブジェクト (仮想データベース) ---
+    let state = {
+      applicants: [],
+      auditLogs: [],
+      currentApplicantId: null, // 詳細表示やマイページ用
+      uploadCache: {
+        photo: null,
+        receipt: null,
+        receiptName: ""
+      },
+      // セキュリティ状態
+      adminSession: {
+        isLoggedIn: false,
+        lastActivity: 0,
+        timerInterval: null
+      },
+      loginLockout: {
+        failedAttempts: 0,
+        lockoutUntil: 0,
+        timerInterval: null
+      }
+    };
+
+    // パスワードのハッシュシミュレーション
+    const HASHED_PASS = "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918"; // "admin1234"
+
+    const MOCK_AVATARS = [
+      "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%236366f1'/><circle cx='50' cy='37' r='20' fill='%23ffffff'/><path d='M20,78 C20,60 30,55 50,55 C70,55 80,60 80,78' fill='%23ffffff'/></svg>",
+      "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23ec4899'/><circle cx='50' cy='37' r='20' fill='%23ffffff'/><path d='M20,78 C20,60 30,55 50,55 C70,55 80,60 80,78' fill='%23ffffff'/></svg>",
+      "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%2310b981'/><circle cx='50' cy='37' r='20' fill='%23ffffff'/><path d='M20,78 C20,60 30,55 50,55 C70,55 80,60 80,78' fill='%23ffffff'/></svg>"
+    ];
+
+    const MOCK_RECEIPT = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 120'><rect x='10' y='10' width='80' height='100' rx='5' fill='%23ecfdf5' stroke='%23a7f3d0' stroke-width='4'/><circle cx='50' cy='45' r='18' fill='%23d1fae5'/><path d='M42,45 L48,51 L58,39' fill='none' stroke='%2310b981' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'/><line x1='25' y1='75' x2='75' y2='75' stroke='%2310b981' stroke-width='4' stroke-linecap='round'/></svg>";
+
+    // --- アプリケーション起動処理 ---
+    document.addEventListener("DOMContentLoaded", () => {
+      init();
+      // 操作によるセッション期限延長のためのグローバルリスナー
+      document.addEventListener("click", updateActivity);
+      document.addEventListener("keydown", updateActivity);
+      
+      // ドラッグ＆ドロップ機能のセットアップ
+      setupDragAndDrop();
+    });
+
+    function init() {
+      const savedApplicants = localStorage.getItem("sec_admission_applicants");
+      if (savedApplicants) {
+        try {
+          state.applicants = JSON.parse(decryptData(savedApplicants));
+        } catch (e) {
+          console.error("データの破損またはキー不一致のため初期化します", e);
+          state.applicants = [];
+        }
+      } else {
+        state.applicants = [];
+      }
+
+      const savedLogs = localStorage.getItem("sec_admission_audit_logs");
+      if (savedLogs) {
+        try {
+          state.auditLogs = JSON.parse(decryptData(savedLogs));
+        } catch (e) {
+          state.auditLogs = [];
+        }
+      } else {
+        addAuditLog("SYSTEM", "セキュアWeb出願システムがローカル暗号化ストレージから開始されました。", "info");
+      }
+
+      lucide.createIcons();
+      
+      // --- ★ 隠し管理者モード（シークレットURL）の判定 ---
+      const urlParams = new URLSearchParams(window.location.search);
+      const isAdminMode = urlParams.get('mode') === 'admin';
+
+      if (isAdminMode) {
+        // 「?mode=admin」をつけてアクセスした場合のみ、管理メニューを表示して管理者画面へ
+        document.getElementById("portal-nav").classList.remove("hidden");
+        switchPortal("admin");
+        checkAdminAuthState();
+      } else {
+        // 通常の志願者アクセスの場合、管理者メニューは一切表示しない
+        document.getElementById("portal-nav").classList.add("hidden");
+        switchPortal("applicant");
+        showApplicantSubView("menu");
+      }
+    }
+
+    // --- 年齢判定と保護者セクションの表示制御 ---
+    function checkAge() {
+      const birthInput = document.getElementById("app-birth").value;
+      const guardSection = document.getElementById("guardian-section");
+      const guardInputs = guardSection.querySelectorAll("input, select");
+      
+      if (birthInput.length === 8 && !isNaN(birthInput)) {
+        const y = parseInt(birthInput.substring(0, 4), 10);
+        const m = parseInt(birthInput.substring(4, 6), 10);
+        const d = parseInt(birthInput.substring(6, 8), 10);
+        
+        const today = new Date();
+        const birthDate = new Date(y, m - 1, d);
+        
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const mDiff = today.getMonth() - birthDate.getMonth();
+        if (mDiff < 0 || (mDiff === 0 && today.getDate() < birthDate.getDate())) {
+          age--;
+        }
+        
+        if (age >= 18) {
+          // 成人の場合：保護者情報は不要（非表示・必須解除）
+          guardSection.classList.add("hidden");
+          guardInputs.forEach(el => el.required = false);
+        } else {
+          // 未成年の場合：保護者情報は必須（表示・必須化）
+          guardSection.classList.remove("hidden");
+          guardInputs.forEach(el => el.required = true);
+        }
+      } else {
+        // 未入力または不正な形式の場合はデフォルトで表示（必須）
+        guardSection.classList.remove("hidden");
+        guardInputs.forEach(el => el.required = true);
+      }
+    }
+
+    // --- セキュリティ暗号化・復号処理 (XOR難読化 + Base64) ---
+    const SEC_KEY = 79; // XORキー
+    function encryptData(text) {
+      const codeArray = [];
+      const len = text.length;
+      for (let i = 0; i < len; i++) {
+        codeArray.push(String.fromCharCode(text.charCodeAt(i) ^ SEC_KEY));
+      }
+      const xorText = codeArray.join("");
+      return btoa(unescape(encodeURIComponent(xorText)));
+    }
+    function decryptData(base64Text) {
+      const text = decodeURIComponent(escape(atob(base64Text)));
+      const codeArray = [];
+      const len = text.length;
+      for (let i = 0; i < len; i++) {
+        codeArray.push(String.fromCharCode(text.charCodeAt(i) ^ SEC_KEY));
+      }
+      return codeArray.join("");
+    }
+
+    // --- XSS防止用：HTMLエスケープ ---
+    function escapeHTML(str) {
+      if (typeof str !== "string") return str;
+      return str.replace(/[&<>'"]/g, (tag) => {
+        return ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          "'": "&#39;",
+          '"': "&quot;"
+        }[tag] || tag);
+      });
+    }
+
+    // --- 監査ログ記録システム ---
+    function addAuditLog(category, message, severity = "info") {
+      const newLog = {
+        time: getFormattedDate(new Date()),
+        category: category,
+        message: message,
+        severity: severity
+      };
+      state.auditLogs.unshift(newLog); // 最新を上に
+      if (state.auditLogs.length > 500) {
+        state.auditLogs.pop();
+      }
+      localStorage.setItem("sec_admission_audit_logs", encryptData(JSON.stringify(state.auditLogs)));
+      
+      if (state.adminSession.isLoggedIn) {
+        renderAuditLogs();
+      }
+    }
+
+    // --- 画面切り替え (志願者 vs 管理者) ---
+    function switchPortal(portal) {
+      const applicantSec = document.getElementById("applicant-portal");
+      const adminSec = document.getElementById("admin-dashboard");
+      const navApplicant = document.getElementById("nav-btn-applicant");
+      const navAdmin = document.getElementById("nav-btn-admin");
+
+      if (portal === "applicant") {
+        applicantSec.classList.remove("hidden");
+        adminSec.classList.add("hidden");
+        
+        navApplicant.classList.add("bg-white", "text-indigo-950", "shadow-sm");
+        navApplicant.classList.remove("text-indigo-200", "hover:text-white");
+        
+        navAdmin.classList.add("text-indigo-200", "hover:text-white");
+        navAdmin.classList.remove("bg-white", "text-indigo-950", "shadow-sm");
+      } else {
+        adminSec.classList.remove("hidden");
+        applicantSec.classList.add("hidden");
+        
+        navAdmin.classList.add("bg-white", "text-indigo-950", "shadow-sm");
+        navAdmin.classList.remove("text-indigo-200", "hover:text-white");
+        
+        navApplicant.classList.add("text-indigo-200", "hover:text-white");
+        navApplicant.classList.remove("bg-white", "text-indigo-950", "shadow-sm");
+        
+        checkAdminAuthState();
+      }
+    }
+
+    // --- 志願者ポータルのサブ画面切り替え ---
+    function showApplicantSubView(view) {
+      const menuGrid = document.querySelector(".portal-cards-grid");
+      const heroArea = document.querySelector(".portal-hero");
+      const applyForm = document.getElementById("subview-apply-form");
+      const statusCheck = document.getElementById("subview-status-check");
+
+      if (view === "menu") {
+        menuGrid.classList.remove("hidden");
+        heroArea.classList.remove("hidden");
+        applyForm.classList.add("hidden");
+        statusCheck.classList.add("hidden");
+      } else if (view === "apply-form") {
+        menuGrid.classList.add("hidden");
+        heroArea.classList.add("hidden");
+        applyForm.classList.remove("hidden");
+        statusCheck.classList.add("hidden");
+        
+        document.getElementById("admission-form").reset();
+        removeUploadedFile("photo");
+        removeUploadedFile("receipt");
+        const chk = document.getElementById("confirm-transcript-sent");
+        if (chk) chk.checked = false;
+        checkAge(); // リセット時に保護者欄の表示も初期状態へ戻す
+      } else if (view === "status-check") {
+        menuGrid.classList.add("hidden");
+        heroArea.classList.add("hidden");
+        applyForm.classList.add("hidden");
+        statusCheck.classList.remove("hidden");
+
+        document.getElementById("login-name").value = "";
+        document.getElementById("login-email").value = "";
+        document.getElementById("status-login-container").classList.remove("hidden");
+        document.getElementById("status-result-container").classList.add("hidden");
+        document.getElementById("login-error").classList.add("hidden");
+      }
+    }
+
+    // --- ドラッグ&ドロップ / ファイル選択の処理 ---
+    function triggerFileInput(id) {
+      document.getElementById(id).click();
+    }
+
+    function previewUpload(input, type) {
+      const file = input.files[0];
+      if (!file) return;
+
+      const isImage = file.type.startsWith("image/");
+
+      if (type === "photo" && !isImage) {
+        showToast("顔写真には画像ファイルを指定してください", "error");
+        return;
+      }
+
+      // 画像自動リサイズ＆圧縮（Canvas使用）フリーズ回避処理
+      if (isImage) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          const img = new Image();
+          img.onload = function () {
+            const canvas = document.createElement("canvas");
+            let max_size = 150; // 顔写真
+            if (type === "receipt") {
+              max_size = 350; // 領収書
+            }
+            let width = img.width;
+            let height = img.height;
+            if (width > height) {
+              if (width > max_size) {
+                height *= max_size / width;
+                width = max_size;
+              }
+            } else {
+              if (height > max_size) {
+                width *= max_size / height;
+                height = max_size;
+              }
+            }
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            const compressedBase64 = canvas.toDataURL("image/jpeg", 0.6);
+            
+            if (type === "photo") {
+              state.uploadCache.photo = compressedBase64;
+              const previewImg = document.getElementById("preview-photo");
+              const container = document.getElementById("preview-photo-container");
+              previewImg.src = compressedBase64;
+              container.classList.remove("hidden");
+            } else {
+              state.uploadCache[type] = compressedBase64;
+              state.uploadCache[`${type}Name`] = file.name;
+              showTranscriptPreview(type, file.name);
+            }
+          };
+          img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      } else {
+        // PDF等のバイナリはモックで軽量処理
+        state.uploadCache[`${type}Name`] = file.name;
+        state.uploadCache[type] = MOCK_RECEIPT;
+        showTranscriptPreview(type, file.name);
+      }
+    }
+
+    function showTranscriptPreview(type, name) {
+      const container = document.getElementById(`preview-${type}-container`);
+      const nameLabel = document.getElementById(`preview-${type}-name`);
+      nameLabel.textContent = name;
+      container.classList.remove("hidden");
+    }
+
+    function removeUploadedFile(type) {
+      if (type === "photo") {
+        state.uploadCache.photo = null;
+        document.getElementById("file-photo").value = "";
+        document.getElementById("preview-photo-container").classList.add("hidden");
+        document.getElementById("preview-photo").src = "";
+      } else {
+        state.uploadCache[type] = null;
+        state.uploadCache[`${type}Name`] = "";
+        document.getElementById(`file-${type}`).value = "";
+        document.getElementById(`preview-${type}-container`).classList.add("hidden");
+      }
+    }
+
+    // --- 志願者：新規出願・確定処理 ---
+    function handleFormSubmit(event) {
+      event.preventDefault();
+      const name = document.getElementById("app-name").value.trim();
+      const kana = document.getElementById("app-kana").value.trim();
+      const birth = document.getElementById("app-birth").value.trim();
+      const phone = document.getElementById("app-phone").value.trim();
+      const email = document.getElementById("app-email").value.trim();
+      const prevSchool = document.getElementById("app-prev-school").value.trim();
+      const prevCourse = document.getElementById("app-prev-course").value;
+      const faculty = document.getElementById("app-faculty").value; // 編入学 / 転入学
+      const course = document.getElementById("app-course").value; // 通信制の課程
+
+      // 保護者情報（成人で非表示の場合は空として扱う）
+      let guardName = "";
+      let guardRelation = "";
+      let guardKana = "";
+      let guardPhone = "";
+
+      const guardSection = document.getElementById("guardian-section");
+      if (!guardSection.classList.contains("hidden")) {
+        guardName = document.getElementById("app-guard-name").value.trim();
+        guardRelation = document.getElementById("app-guard-relation").value;
+        guardKana = document.getElementById("app-guard-kana").value.trim();
+        guardPhone = document.getElementById("app-guard-phone").value.trim();
+      }
+
+      // 同意チェックボックス
+      const transcriptChecked = document.getElementById("confirm-transcript-sent").checked;
+
+      // バリデーション
+      if (birth.length !== 8 || isNaN(birth)) {
+        showToast("生年月日は半角数字8桁で入力してください", "error");
+        return;
+      }
+      if (!state.uploadCache.photo) {
+        showToast("顔写真をアップロードしてください", "error");
+        return;
+      }
+      if (!transcriptChecked) {
+        showToast("成績単位修得証明書に関する事前確認にチェックを入れてください", "error");
+        return;
+      }
+      if (!state.uploadCache.receipt) {
+        showToast("受験料振込証明書をアップロードしてください", "error");
+        return;
+      }
+
+      const randNum = Math.floor(10000 + Math.random() * 90000);
+      const appId = `AD-${randNum}`;
+      
+      const newApplicant = {
+        id: appId,
+        name: name,
+        kana: kana,
+        birthDate: birth,
+        phone: phone,
+        email: email,
+        prevSchool: prevSchool,
+        prevCourse: prevCourse,
+        faculty: faculty, // 志願区分
+        course: course, // 志望課程
+        guardianName: guardName,
+        guardianRelation: guardRelation,
+        guardianKana: guardKana,
+        guardianPhone: guardPhone,
+        // 成績単位修得証明書の事前提出フラグ
+        transcriptStatus: "school_sent",
+        // 提出書類 (軽量化済)
+        photo: state.uploadCache.photo,
+        receipt: state.uploadCache.receipt,
+        receiptName: state.uploadCache.receiptName || "振込領収書.png",
+        
+        date: getFormattedDate(new Date()),
+        feePaid: false, 
+        status: "applied", 
+        notes: "",
+        examId: null
+      };
+
+      // 1. ローカルメモリに一時保存
+      state.applicants.push(newApplicant);
+      saveToLocalStorage();
+
+      // 2. 出願ファイル (.dat) をダウンロード
+      downloadDatFile(newApplicant);
+
+      // 3. メールクライアント起動用リンク生成（mailto）
+      triggerApplicationEmail(newApplicant);
+
+      // 監査ログに記録
+      addAuditLog(
+        "DATA_MODIFY", 
+        `新規Web出願をローカル処理。出願番号: ${appId}, 氏名: ${name} / メール添付送出準備`,
+        "info"
+      );
+
+      // 出願案内完了モーダル表示
+      showRegistrationCompleteModal(newApplicant);
+      
+      // 状況確認画面の準備
+      showApplicantSubView("status-check");
+      document.getElementById("login-name").value = name;
+      document.getElementById("login-email").value = email;
+    }
+
+    // --- メール自動作成リンク起動 ---
+    function triggerApplicationEmail(applicant) {
+      // 教育委員会指定メールアドレスを設定
+      const schoolEmail = "t-itoryoh@e.osakamanabi.jp";
+      const subject = `【web出願】出願データ送信（出願番号：${applicant.id} / 氏名：${applicant.name}）`;
+      
+      const body = `--------------------------------------------------
+本メールはweb出願システムより自動生成された送信専用ひな形です。
+--------------------------------------------------
+
+学校名：通信制の課程 受付事務局 殿
+
+【警告：送信するだけでは、まだ出願手続きは完了していません！】
+※同時にパソコンやスマートフォンにダウンロードされた暗号化出願ファイル（.dat）を、
+「必ずこのメールに添付した上で」送信ボタンを押してください。
+
+■出願者情報
+・出願番号: ${applicant.id}
+・氏名: ${applicant.name}（フリガナ: ${applicant.kana}）
+・生年月日: ${applicant.birthDate}
+・前籍校: ${applicant.prevSchool} (${applicant.prevCourse})
+・志願区分: ${applicant.faculty}
+・志望する課程: ${applicant.course}
+・電話番号: ${applicant.phone}
+
+■保護者連絡先
+${applicant.guardianName ? `・氏名: ${applicant.guardianName}（続柄: ${applicant.guardianRelation}）\n・緊急連絡先: ${applicant.guardianPhone}` : '・登録不要（成人等による免除）'}
+
+--------------------------------------------------
+※添付ファイル名：出願データ_${applicant.id}_${applicant.name.replace(/\s+/g, "")}.dat
+--------------------------------------------------`;
+
+      const mailtoLink = `mailto:${schoolEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      
+      // 新しいウィンドウまたはメールアプリを開く
+      setTimeout(() => {
+        window.location.href = mailtoLink;
+      }, 800);
+    }
+
+    // --- 出願者データの暗号化ファイルダウンロード処理 ---
+    function downloadDatFile(applicant) {
+      const encryptedText = encryptData(JSON.stringify(applicant));
+      const blob = new Blob([encryptedText], { type: "text/plain;charset=utf-8" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `出願データ_${applicant.id}_${applicant.name.replace(/\s+/g, "")}.dat`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
+    // --- 出願完了案内モーダル ---
+    function showRegistrationCompleteModal(applicant) {
+      const modal = document.getElementById("modal-container");
+      const body = document.getElementById("modal-body-content");
+      modal.classList.remove("hidden");
+
+      body.innerHTML = `
+        <div class="text-center space-y-4">
+          <div class="mx-auto w-12 h-12 bg-indigo-100 text-indigo-700 rounded-full flex items-center justify-center">
+            <i data-lucide="mail-check" class="w-6 h-6"></i>
+          </div>
+          <h4 class="text-lg font-bold text-slate-800">出願用メール作成画面が立ち上がりました</h4>
+          
+          <div class="bg-indigo-50 border border-indigo-100 p-4 rounded-xl text-left space-y-2 text-xs text-slate-700">
+            <p class="font-bold text-indigo-900 flex items-center gap-1">
+              <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-500"></i>重要：メール送信を完了させてください
+            </p>
+            <p class="text-slate-800 font-semibold">1. パソコン/スマホに保存された暗号化ファイル（.dat）を確認します。</p>
+            <p class="text-slate-600 font-mono text-[10px] pl-2">ファイル名: 出願データ_${applicant.id}_${escapeHTML(applicant.name)}.dat</p>
+            <p class="text-slate-800 font-semibold">2. 自動で開いたメール作成画面に、そのファイルを添付してそのまま本校宛に送信してください。</p>
+            <p class="text-red-600 font-semibold">※メールの送信が完了するまで出願手続きは完了いたしません。</p>
+          </div>
+
+          <div class="p-3 bg-slate-50 rounded-lg text-xs space-y-1 text-left">
+            <div><strong>お名前:</strong> ${escapeHTML(applicant.name)}</div>
+            <div><strong>出願ID:</strong> <span class="font-mono font-bold">${applicant.id}</span></div>
+            <div><strong>志願区分:</strong> ${escapeHTML(applicant.faculty)}</div>
+          </div>
+
+          <div class="flex gap-2">
+            <button onclick="downloadDatFile(JSON.parse(decryptData('${encryptData(JSON.stringify(applicant))}')))" class="flex-1 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-semibold flex items-center justify-center gap-1">
+              <i data-lucide="download" class="w-4 h-4"></i> ファイル再保存
+            </button>
+            <button onclick="closeModal(); queryApplicationStatus();" class="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold">
+              状況確認へ進む
+            </button>
+          </div>
+        </div>
+      `;
+      lucide.createIcons();
+    }
+
+    // --- 志願者：ステータス照会 ---
+    function queryApplicationStatus() {
+      const nameInput = document.getElementById("login-name").value.trim();
+      const emailInput = document.getElementById("login-email").value.trim();
+      const errorMsg = document.getElementById("login-error");
+      const loginForm = document.getElementById("status-login-container");
+      const resultView = document.getElementById("status-result-container");
+
+      if (!nameInput || !emailInput) {
+        showToast("氏名とメールアドレスを入力してください", "error");
+        return;
+      }
+
+      const applicant = state.applicants.find(
+        app => app.name === nameInput && app.email === emailInput
+      );
+
+      if (!applicant) {
+        errorMsg.classList.remove("hidden");
+        resultView.classList.add("hidden");
+        addAuditLog(
+          "AUTH",
+          `不審な出願状況の照会を検知。入力氏名: ${nameInput}, 入力メール: ${emailInput}`,
+          "warning"
+        );
+        return;
+      }
+
+      errorMsg.classList.add("hidden");
+      loginForm.classList.add("hidden");
+      resultView.classList.remove("hidden");
+      
+      state.currentApplicantId = applicant.id;
+      renderStatusChecker(applicant);
+    }
+
+    function renderStatusChecker(applicant) {
+      document.getElementById("res-app-id").textContent = `出願ID: ${applicant.id}`;
+      document.getElementById("res-name").textContent = applicant.name;
+      document.getElementById("res-faculty").textContent = applicant.faculty;
+      document.getElementById("res-course").textContent = applicant.course || "通信制の課程";
+      document.getElementById("res-prev-school").textContent = `${applicant.prevSchool || ''} ${applicant.prevCourse ? '('+applicant.prevCourse+')' : ''}`;
+      document.getElementById("res-date").textContent = applicant.date;
+      document.getElementById("res-photo").src = applicant.photo || MOCK_AVATARS[0];
+
+      // 生年月日を8桁表示
+      document.getElementById("res-birth").textContent = formatBirthDate(applicant.birthDate);
+      
+      if (applicant.guardianName) {
+        document.getElementById("res-guard-name").textContent = applicant.guardianName;
+        document.getElementById("res-guard-relation").textContent = `(${applicant.guardianRelation})`;
+        document.getElementById("res-guard-phone").textContent = applicant.guardianPhone;
+      } else {
+        document.getElementById("res-guard-name").textContent = "登録不要 (18歳以上)";
+        document.getElementById("res-guard-relation").textContent = "";
+        document.getElementById("res-guard-phone").textContent = "";
+      }
+
+      // タイムライン描画
+      const steps = [
+        { key: "applied", domId: "step-applied" },
+        { key: "fee", domId: "step-fee" },
+        { key: "review", domId: "step-review" },
+        { key: "ticket", domId: "step-ticket" },
+        { key: "result", domId: "step-result" }
+      ];
+
+      let currentStepIdx = 0;
+      let completedSteps = ["applied"];
+
+      if (applicant.feePaid) {
+        completedSteps.push("fee");
+        currentStepIdx = 1;
+      }
+      if (applicant.status === "reviewing") {
+        currentStepIdx = 2;
+      } else if (applicant.status === "ticket_issued" || applicant.status === "passed" || applicant.status === "failed") {
+        completedSteps.push("fee");
+        completedSteps.push("review");
+        currentStepIdx = 3;
+      }
+      if (applicant.status === "ticket_issued") {
+        completedSteps.push("ticket");
+        currentStepIdx = 3;
+      } else if (applicant.status === "passed" || applicant.status === "failed") {
+        completedSteps.push("ticket");
+        completedSteps.push("result");
+        currentStepIdx = 4;
+      }
+
+      steps.forEach((step, idx) => {
+        const el = document.getElementById(step.domId);
+        const numEl = el.querySelector(".step-num");
+        
+        el.classList.remove("text-teal-600", "font-bold", "text-slate-400");
+        numEl.classList.remove("bg-teal-600", "text-white", "bg-teal-100", "text-teal-700");
+
+        if (completedSteps.includes(step.key)) {
+          el.classList.add("text-teal-600", "font-bold");
+          numEl.classList.add("bg-teal-600", "text-white");
+          numEl.innerHTML = "<i data-lucide='check' class='w-3 h-3'></i>";
+        } else if (idx === currentStepIdx) {
+          el.classList.add("text-indigo-600", "font-bold");
+          numEl.classList.add("bg-indigo-100", "text-indigo-700");
+          numEl.textContent = idx + 1;
+        } else {
+          el.classList.add("text-slate-400");
+          numEl.classList.add("bg-slate-200", "text-slate-600");
+          numEl.textContent = idx + 1;
+        }
+      });
+
+      const timeline = document.querySelector(".timeline-progress-line");
+      const percentWidth = (currentStepIdx / (steps.length - 1)) * 100;
+      timeline.style.height = `${percentWidth}%`;
+
+      const instructionCard = document.getElementById("instruction-card");
+      let html = "";
+
+      if (!applicant.feePaid) {
+        html = `
+          <div class="bg-amber-100 p-2 rounded-lg text-amber-700"><i data-lucide="alert-circle" class="w-6 h-6"></i></div>
+          <div class="space-y-1">
+            <h5 class="font-bold text-slate-800 text-sm">受験料の確認およびメール送信照合中</h5>
+            <p class="text-xs text-slate-600">お送りいただいたメールデータ（.datファイル）および「領収証控」の情報を校内事務局が照合確認中です。確認が取れましたら次のステップに進みます。</p>
+          </div>
+        `;
+      } else if (applicant.feePaid && applicant.status === "applied") {
+        html = `
+          <div class="bg-indigo-100 p-2 rounded-lg text-indigo-700"><i data-lucide="clock" class="w-6 h-6"></i></div>
+          <div class="space-y-1">
+            <h5 class="font-bold text-slate-800 text-sm">受付・入金確認完了（書類審査待ち）</h5>
+            <p class="text-xs text-slate-600">出願メールと受験料の確認が取れました。現在、在籍校から送付される「成績単位修得証明書」が事務局へ到着するのを確認・照合中です。</p>
+          </div>
+        `;
+      } else if (applicant.status === "reviewing") {
+        html = `
+          <div class="bg-blue-100 p-2 rounded-lg text-blue-700"><i data-lucide="loader" class="w-6 h-6 animate-spin"></i></div>
+          <div class="space-y-1 w-full">
+            <h5 class="font-bold text-slate-800 text-sm">提出書類・単位審査中</h5>
+            <p class="text-xs text-slate-600">在籍校からの成績単位証明書をもとに、単位認定および履修要件の審査を実施中です。</p>
+            ${applicant.notes ? `<div class="bg-white border-l-4 border-amber-500 p-2.5 mt-2 text-xs text-slate-700 rounded-r"><strong>事務局からの連絡:</strong><br>${escapeHTML(applicant.notes)}</div>` : ""}
+          </div>
+        `;
+      } else if (applicant.status === "ticket_issued") {
+        html = `
+          <div class="bg-emerald-100 p-2 rounded-lg text-emerald-700"><i data-lucide="check-square" class="w-6 h-6"></i></div>
+          <div class="space-y-2">
+            <h5 class="font-bold text-slate-800 text-sm">書類審査通過・受験票が発行されました</h5>
+            <p class="text-xs text-slate-600">出願書類の審査がすべて完了しました。本選考（当日試験）の受験票を発行いたしましたので、以下より印刷して当日お持ちください。</p>
+            <button onclick="openExamTicket('${escapeHTML(applicant.id)}')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-1.5 rounded-lg text-xs flex items-center gap-1 shadow">
+              <i data-lucide="printer" class="w-3.5 h-3.5"></i> 受験票を表示・印刷する
+            </button>
+          </div>
+        `;
+      } else if (applicant.status === "passed") {
+        html = `
+          <div class="bg-pink-100 p-2 rounded-lg text-pink-700"><i data-lucide="award" class="w-6 h-6"></i></div>
+          <div class="space-y-2">
+            <h5 class="font-bold text-slate-800 text-sm">合否判定結果が公開されました</h5>
+            <p class="text-xs text-slate-600">おめでとうございます。選考の結果、合格が決定いたしました。下記ボタンより合否判定通知書をご確認ください。</p>
+            <button onclick="openPassFailResult('${escapeHTML(applicant.id)}')" class="bg-pink-600 hover:bg-pink-700 text-white font-semibold px-4 py-1.5 rounded-lg text-xs flex items-center gap-1 shadow">
+              <i data-lucide="award" class="w-3.5 h-3.5"></i> 合否判定結果を確認する
+            </button>
+          </div>
+        `;
+      } else if (applicant.status === "failed") {
+        html = `
+          <div class="bg-slate-200 p-2 rounded-lg text-slate-700"><i data-lucide="file-text" class="w-6 h-6"></i></div>
+          <div class="space-y-2">
+            <h5 class="font-bold text-slate-800 text-sm">合否判定結果が公開されました</h5>
+            <p class="text-xs text-slate-600">本選考結果の判定通知書が確定いたしました。下記より内容をご確認ください。</p>
+            <button onclick="openPassFailResult('${escapeHTML(applicant.id)}')" class="bg-slate-700 hover:bg-slate-800 text-white font-semibold px-4 py-1.5 rounded-lg text-xs flex items-center gap-1 shadow">
+              <i data-lucide="file-text" class="w-3.5 h-3.5"></i> 判定通知書を確認する
+            </button>
+          </div>
+        `;
+      }
+
+      instructionCard.innerHTML = html;
+      lucide.createIcons();
+    }
+
+    // --- 2. 管理者：認証 ＆ セッション管理 ---
+    function checkAdminAuthState() {
+      const loginView = document.getElementById("admin-login-view");
+      const dashboardView = document.getElementById("admin-dashboard-view");
+      const timerContainer = document.getElementById("session-timer-container");
+      const navBtnAdmin = document.getElementById("nav-btn-admin");
+      const logoIcon = document.getElementById("header-logo-icon");
+
+      if (state.adminSession.isLoggedIn) {
+        loginView.classList.add("hidden");
+        dashboardView.classList.remove("hidden");
+        timerContainer.classList.remove("hidden");
+        
+        navBtnAdmin.innerHTML = "<i data-lucide='shield-check' class='w-4 h-4'></i> 管理ダッシュボード";
+        navBtnAdmin.classList.add("bg-white", "text-indigo-950");
+        
+        logoIcon.setAttribute("data-lucide", "shield-check");
+        logoIcon.classList.remove("text-indigo-300");
+        logoIcon.classList.add("text-emerald-400");
+        
+        renderAdminTable();
+        renderAuditLogs();
+      } else {
+        loginView.classList.remove("hidden");
+        dashboardView.classList.add("hidden");
+        timerContainer.classList.add("hidden");
+        
+        navBtnAdmin.innerHTML = "<i data-lucide='lock' class='w-4 h-4'></i> 管理者ログイン";
+        
+        logoIcon.setAttribute("data-lucide", "shield");
+        logoIcon.classList.remove("text-emerald-400");
+        logoIcon.classList.add("text-indigo-300");
+      }
+      lucide.createIcons();
+    }
+
+    function handleAdminLogin(inputPassword) {
+      const now = Date.now();
+      
+      if (state.loginLockout.lockoutUntil > now) {
+        const remaining = Math.ceil((state.loginLockout.lockoutUntil - now) / 1000);
+        showToast(`不正アクセス防止ロック中。残り ${remaining} 秒`, "error");
+        return;
+      }
+
+      if (inputPassword === "admin1234") {
+        state.adminSession.isLoggedIn = true;
+        state.adminSession.lastActivity = Date.now();
+        state.loginLockout.failedAttempts = 0; 
+        
+        addAuditLog("AUTH", "管理者ログイン成功。管理ダッシュボードを開きました。", "info");
+        showToast("管理者ログインに成功しました", "success");
+        
+        startAdminSession();
+        checkAdminAuthState();
+      } else {
+        state.loginLockout.failedAttempts++;
+        addAuditLog("AUTH", `管理者ログイン失敗。失敗回数: ${state.loginLockout.failedAttempts}回`, "warning");
+        
+        if (state.loginLockout.failedAttempts >= 5) {
+          state.loginLockout.lockoutUntil = Date.now() + 60000; 
+          addAuditLog("AUTH", "連続5回ログイン失敗。システムへの疑わしいアクセスとして一時ロックしました。", "alert");
+          showToast("ログインを連続で失敗したため、1分間ロックされました", "error");
+        } else {
+          showToast(`パスワードが違います（あと ${5 - state.loginLockout.failedAttempts} 回でロック）`, "error");
+        }
+      }
+    }
+
+    function startAdminSession() {
+      if (state.adminSession.timerInterval) clearInterval(state.adminSession.timerInterval);
+      
+      state.adminSession.timerInterval = setInterval(() => {
+        const now = Date.now();
+        const idleTime = now - state.adminSession.lastActivity;
+        const sessionTimeout = 15 * 60 * 1000; 
+        
+        if (idleTime > sessionTimeout) {
+          handleAdminLogout("一定時間無操作のため、安全規則に基づき自動ログアウトしました。");
+        } else {
+          const remainSec = Math.ceil((sessionTimeout - idleTime) / 1000);
+          const min = Math.floor(remainSec / 60);
+          const sec = remainSec % 60;
+          document.getElementById("session-timer").textContent = `自動切断まで ${min}分${String(sec).padStart(2, '0')}秒`;
+        }
+      }, 1000);
+    }
+
+    function updateActivity() {
+      if (state.adminSession.isLoggedIn) {
+        state.adminSession.lastActivity = Date.now();
+      }
+    }
+
+    function handleAdminLogout(reason = "ユーザー操作による安全ログアウト") {
+      state.adminSession.isLoggedIn = false;
+      if (state.adminSession.timerInterval) {
+        clearInterval(state.adminSession.timerInterval);
+        state.adminSession.timerInterval = null;
+      }
+      addAuditLog("AUTH", `管理者ログアウト: ${reason}`, "info");
+      showToast(reason, "info");
+      checkAdminAuthState();
+    }
+
+    // --- ★ 暗号化データファイル (.dat) のドラッグ＆ドロップ回収セットアップ ---
+    function setupDragAndDrop() {
+      const dropZone = document.getElementById("drop-zone");
+      if (!dropZone) return;
+
+      dropZone.addEventListener("click", () => {
+        document.getElementById("dat-file-picker").click();
+      });
+
+      dropZone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropZone.classList.add("bg-indigo-100/80", "border-indigo-500", "text-indigo-900");
+      });
+
+      dropZone.addEventListener("dragleave", () => {
+        dropZone.classList.remove("bg-indigo-100/80", "border-indigo-500", "text-indigo-900");
+      });
+
+      dropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropZone.classList.remove("bg-indigo-100/80", "border-indigo-500", "text-indigo-900");
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+          processDatFiles(files);
+        }
+      });
+    }
+
+    function handleDatFilesSelected(event) {
+      const files = event.target.files;
+      if (files.length > 0) {
+        processDatFiles(files);
+      }
+      event.target.value = ""; 
+    }
+
+    function processDatFiles(files) {
+      if (!state.adminSession.isLoggedIn) {
+        showToast("データ追加には管理者認証が必要です", "error");
+        return;
+      }
+
+      let successCount = 0;
+      let existCount = 0;
+      let errorCount = 0;
+      let filesProcessed = 0;
+
+      Array.from(files).forEach(file => {
+        if (!file.name.endsWith(".dat")) {
+          errorCount++;
+          filesProcessed++;
+          checkAllProcessed();
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          try {
+            const rawEncrypted = e.target.result.trim();
+            const decryptedJSON = decryptData(rawEncrypted);
+            const applicantObj = JSON.parse(decryptedJSON);
+
+            if (applicantObj && applicantObj.id && applicantObj.name) {
+              const isExist = state.applicants.some(app => app.id === applicantObj.id);
+              if (isExist) {
+                existCount++;
+              } else {
+                state.applicants.push(applicantObj);
+                successCount++;
+              }
+            } else {
+              errorCount++;
+            }
+          } catch (err) {
+            console.error("ファイル解読エラー:", err);
+            errorCount++;
+          }
+
+          filesProcessed++;
+          checkAllProcessed();
+        };
+        
+        reader.readAsText(file);
+      });
+
+      function checkAllProcessed() {
+        if (filesProcessed === files.length) {
+          if (successCount > 0) {
+            saveToLocalStorage();
+            renderAdminTable();
+          }
+
+          addAuditLog(
+            "DATA_MODIFY", 
+            `暗号化ファイルを一括取り込み。成功: ${successCount}件, 重複無視: ${existCount}件, 失敗: ${errorCount}件`,
+            "info"
+          );
+
+          if (successCount > 0) {
+            showToast(`${successCount}件の出願データ（.dat）を正常に取り込み・復号しました`, "success");
+          } else if (existCount > 0) {
+            showToast(`取り込まれたデータはすべて登録済みでした（${existCount}件）`, "info");
+          } else {
+            showToast(`ファイルの解読に失敗しました。正しい出願ファイル(.dat)かご確認ください。`, "error");
+          }
+        }
+      }
+    }
+
+    // --- 管理ダッシュボードのデータ描画 ---
+    function renderAdminTable() {
+      const tbody = document.getElementById("admin-table-body");
+      document.getElementById("applicant-count").textContent = state.applicants.length;
+      
+      if (state.applicants.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" class="p-8 text-center text-slate-400">出願者データがありません。「.dat」ファイルを放り込むか、デモデータを作成してください。</td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = state.applicants.map(app => {
+        const feeBadge = app.feePaid 
+          ? `<span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-[10px] font-semibold">領収済</span>` 
+          : `<span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-[10px] font-semibold">要照合</span>`;
+        
+        let statusBadge = "";
+        switch (app.status) {
+          case "applied": statusBadge = `<span class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[10px] font-semibold">未着手</span>`; break;
+          case "reviewing": statusBadge = `<span class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-[10px] font-semibold">審査中</span>`; break;
+          case "ticket_issued": statusBadge = `<span class="bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded text-[10px] font-semibold">受験票済</span>`; break;
+          case "passed": statusBadge = `<span class="bg-pink-100 text-pink-800 px-2 py-0.5 rounded text-[10px] font-semibold">合格決定</span>`; break;
+          case "failed": statusBadge = `<span class="bg-slate-300 text-slate-800 px-2 py-0.5 rounded text-[10px] font-semibold">不合格</span>`; break;
+        }
+
+        const examIdText = app.examId ? `<span class="font-mono font-bold text-slate-700">${app.examId}</span>` : `<span class="text-slate-400">未付与</span>`;
+
+        return `
+          <tr class="hover:bg-slate-50 transition">
+            <td class="p-3"><button onclick="selectApplicant('${app.id}')" class="font-mono font-bold text-indigo-600 hover:underline">${app.id}</button></td>
+            <td class="p-3">
+              <div class="font-bold text-slate-800">${escapeHTML(app.name)}</div>
+              <div class="text-[10px] text-slate-400">${escapeHTML(app.kana)}</div>
+            </td>
+            <td class="p-3 text-slate-600">${escapeHTML(app.faculty)}</td>
+            <td class="p-3">${feeBadge}</td>
+            <td class="p-3">${statusBadge}</td>
+            <td class="p-3">${examIdText}</td>
+            <td class="p-3">
+              <button onclick="selectApplicant('${app.id}')" class="text-indigo-600 hover:text-indigo-900 font-semibold text-[11px] flex items-center gap-0.5"><i data-lucide="eye" class="w-3.5 h-3.5"></i>審査</button>
+            </td>
+          </tr>
+        `;
+      }).join("");
+      lucide.createIcons();
+    }
+
+    function selectApplicant(id) {
+      state.currentApplicantId = id;
+      const applicant = state.applicants.find(app => app.id === id);
+      if (!applicant) return;
+
+      document.getElementById("check-panel-empty").classList.add("hidden");
+      const panel = document.getElementById("check-panel-content");
+      panel.classList.remove("hidden");
+
+      panel.innerHTML = `
+        <div class="space-y-3">
+          <div class="flex items-center gap-3">
+            <img class="w-12 h-16 object-cover border rounded" src="${applicant.photo || MOCK_AVATARS[0]}">
+            <div>
+              <div class="font-bold text-slate-800 text-sm">${escapeHTML(applicant.name)}</div>
+              <div class="text-slate-400 text-[10px]">${applicant.id}</div>
+              <div class="text-slate-400 text-[10px]">前籍校: ${escapeHTML(applicant.prevSchool || '未登録')} (${escapeHTML(applicant.prevCourse || '')})</div>
+            </div>
+          </div>
+
+          <div class="border-t border-slate-100 my-2 pt-2 space-y-2">
+            <div class="font-semibold text-slate-700">提出・送付資料一覧:</div>
+            
+            <!-- 在籍校からの書類確認 -->
+            <div class="bg-indigo-50/50 p-2.5 rounded border border-indigo-100 space-y-1">
+              <div class="flex justify-between items-center">
+                <span class="font-bold text-[11px] text-slate-700">成績単位修得証明書 (郵送/直接)</span>
+                <span class="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-bold">在籍校送付</span>
+              </div>
+              <p class="text-[10px] text-slate-500">在籍校より直接郵送されてきた原本とデータに相違がないか照合してください。</p>
+            </div>
+
+            <!-- 領収証確認 -->
+            <div class="flex justify-between items-center bg-slate-50 p-2 rounded border border-slate-100">
+              <span class="truncate pr-2 text-slate-600 text-[11px]">受験料：${escapeHTML(applicant.receiptName)}</span>
+              <div class="flex gap-1.5">
+                <button onclick="openMockDoc('領収証プレビュー', '${applicant.receipt}')" class="text-indigo-600 hover:underline">表示</button>
+                <button onclick="toggleFeePaid('${applicant.id}')" class="px-2 py-0.5 rounded text-[10px] ${applicant.feePaid ? 'bg-emerald-600 text-white' : 'bg-slate-300 text-slate-700'}">${applicant.feePaid ? '受領済' : '確認'}</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 個別判定・審査操作 -->
+          <div class="border-t border-slate-100 my-2 pt-2 space-y-3">
+            <div>
+              <label class="block font-semibold text-slate-600 mb-1">個別連絡メモ・通知</label>
+              <textarea id="panel-notes" class="w-full border p-2 rounded text-xs" rows="2" placeholder="在籍校からの書類確認状況や不備通知など">${escapeHTML(applicant.notes)}</textarea>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2">
+              <button onclick="updateApplicantStatus('${applicant.id}', 'reviewing')" class="py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded">審査中に変更</button>
+              <button onclick="issueExamTicket('${applicant.id}')" class="py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded">受験票を発行する</button>
+            </div>
+            
+            <div class="border-t border-slate-100 pt-2 flex gap-2">
+              <button onclick="updateApplicantStatus('${applicant.id}', 'passed')" class="flex-grow py-1.5 bg-pink-600 hover:bg-pink-700 text-white font-semibold rounded">選考：合格</button>
+              <button onclick="updateApplicantStatus('${applicant.id}', 'failed')" class="flex-grow py-1.5 bg-slate-500 hover:bg-slate-600 text-white font-semibold rounded">選考：不合格</button>
+            </div>
+          </div>
+        </div>
+      `;
+      lucide.createIcons();
+    }
+
+    // --- 審査状況コントロール処理 ---
+    function toggleFeePaid(id) {
+      const applicant = state.applicants.find(app => app.id === id);
+      if (!applicant) return;
+      
+      applicant.feePaid = !applicant.feePaid;
+      saveToLocalStorage();
+      renderAdminTable();
+      selectApplicant(id); 
+
+      addAuditLog(
+        "DATA_MODIFY", 
+        `出願番号: ${id} の受験料確認ステータスを ${applicant.feePaid ? '【入金済】' : '【要照合】'} に変更しました。`,
+        "info"
+      );
+    }
+
+    function updateApplicantStatus(id, newStatus) {
+      const applicant = state.applicants.find(app => app.id === id);
+      if (!applicant) return;
+
+      const notes = document.getElementById("panel-notes").value.trim();
+      applicant.status = newStatus;
+      applicant.notes = notes;
+
+      saveToLocalStorage();
+      renderAdminTable();
+      selectApplicant(id);
+
+      addAuditLog(
+        "DATA_MODIFY", 
+        `出願番号: ${id} の審査ステータスを 【${newStatus}】 に更新しました。メモ: "${notes}"`,
+        "info"
+      );
+      showToast("ステータスを更新しました", "success");
+    }
+
+    function issueExamTicket(id) {
+      const applicant = state.applicants.find(app => app.id === id);
+      if (!applicant) return;
+
+      if (!applicant.feePaid) {
+        showToast("受験料が「領収済」になっていないため、受験票は発行できません", "error");
+        return;
+      }
+
+      if (!applicant.examId) {
+        const randNum = Math.floor(1000 + Math.random() * 9000);
+        applicant.examId = `EX-${randNum}`;
+      }
+
+      applicant.status = "ticket_issued";
+      const notes = document.getElementById("panel-notes").value.trim();
+      applicant.notes = notes;
+
+      saveToLocalStorage();
+      renderAdminTable();
+      selectApplicant(id);
+
+      addAuditLog(
+        "DATA_MODIFY", 
+        `出願番号: ${id} の受験票を発行しました。受験番号: ${applicant.examId}`,
+        "info"
+      );
+      showToast(`受験番号 ${applicant.examId} を発行しました`, "success");
+    }
+
+    // --- 監査ログ描画 ---
+    function renderAuditLogs() {
+      const container = document.getElementById("audit-log-container");
+      if (state.auditLogs.length === 0) {
+        container.innerHTML = `<div class="text-slate-400 text-center py-4">監査ログはありません</div>`;
+        return;
+      }
+
+      container.innerHTML = state.auditLogs.map(log => {
+        let severityColor = "text-slate-500";
+        let severityLabel = "情報";
+        if (log.severity === "warning") { severityColor = "text-amber-500 font-semibold"; severityLabel = "警告"; }
+        else if (log.severity === "alert") { severityColor = "text-red-500 font-bold"; severityLabel = "重大"; }
+
+        return `
+          <div class="border-b border-slate-100 pb-1.5 space-y-0.5">
+            <div class="flex justify-between text-[9px] text-slate-400">
+              <span>${log.time}</span>
+              <span class="${severityColor}">[${severityLabel}]</span>
+            </div>
+            <div class="text-slate-700 leading-tight">${escapeHTML(log.message)}</div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    // --- モックデータ生成 ---
+    function generateMockData() {
+      const names = ["宮沢 賢治", "新美 南吉", "太宰 治"];
+      const kanas = ["ミヤザワ ケンジ", "ニイミ ナンキチ", "ダザイ オサム"];
+      const births = ["20050827", "20100730", "20100619"]; // 1人目は成人
+      const prevSchools = ["大阪市立第一高等学校", "府立第二高等学校", "関西第三高等学校"];
+      const prevCourses = ["全日制", "定時制", "通信制"];
+      const faculties = ["編入学", "転入学", "編入学"];
+
+      for (let i = 0; i < 3; i++) {
+        const randNum = Math.floor(10000 + Math.random() * 90000);
+        const appId = `AD-${randNum}`;
+        const newApp = {
+          id: appId,
+          name: names[i],
+          kana: kanas[i],
+          birthDate: births[i],
+          phone: `090-9999-111${i}`,
+          email: `demo${i}@example.com`,
+          prevSchool: prevSchools[i],
+          prevCourse: prevCourses[i],
+          faculty: faculties[i], // 志願区分
+          course: "通信制の課程",
+          // 1人目は成人として扱うため保護者情報を空にする
+          guardianName: i === 0 ? "" : `${names[i].split(" ")[0]} 惣兵衛`,
+          guardianRelation: i === 0 ? "" : "父",
+          guardianKana: i === 0 ? "" : `${kanas[i].split(" ")[0]} ソウベエ`,
+          guardianPhone: i === 0 ? "" : `090-8888-222${i}`,
+          photo: MOCK_AVATARS[i % MOCK_AVATARS.length],
+          transcriptStatus: "school_sent",
+          receipt: MOCK_RECEIPT,
+          receiptName: `受験料ATM控_${names[i].replace(" ", "")}.png`,
+          date: getFormattedDate(new Date()),
+          feePaid: i === 0, 
+          status: "applied",
+          notes: "",
+          examId: null
+        };
+        state.applicants.push(newApp);
+      }
+
+      saveToLocalStorage();
+      renderAdminTable();
+      addAuditLog("DATA_MODIFY", "デモ用模擬データを3件一括生成しました（編入・転入等）。", "info");
+      showToast("模擬データを3件追加しました", "info");
+    }
+
+    // --- ローカルExcelダウンロード (SheetJSによる完全クライアントサイド動作) ---
+    function exportToExcel() {
+      if (!state.adminSession.isLoggedIn) return;
+      if (state.applicants.length === 0) {
+        showToast("出力するデータがありません", "error");
+        return;
+      }
+
+      const excelData = state.applicants.map(app => ({
+        "出願番号": app.id,
+        "氏名": app.name,
+        "フリガナ": app.kana,
+        "生年月日": formatBirthDate(app.birthDate),
+        "電話番号": app.phone,
+        "メールアドレス": app.email,
+        "前籍校": app.prevSchool || "",
+        "前籍校課程": app.prevCourse || "",
+        "志願区分": app.faculty,
+        "志望課程": app.course || "通信制の課程",
+        "保護者氏名": app.guardianName || "不要(成人)",
+        "続柄": app.guardianRelation || "",
+        "緊急連絡先": app.guardianPhone || "",
+        "出願日": app.date,
+        "入金ステータス": app.feePaid ? "入金済" : "要確認",
+        "在籍校成績証明": app.transcriptStatus === "school_sent" ? "確認必要" : "未受領",
+        "書類審査ステータス": app.status === "ticket_issued" ? "受験票済" : app.status === "passed" ? "合格" : app.status === "failed" ? "不合格" : "審査中",
+        "受験番号": app.examId || "未付与",
+        "校内職員コメント": app.notes || ""
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(excelData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "志願者一覧");
+
+      const filename = `出願データ一括出力_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      XLSX.writeFile(wb, filename);
+
+      addAuditLog(
+        "DATA_EXPORT", 
+        `管理者による個人情報Excelエクスポートを実行。ファイル名: ${filename}, 出力件数: ${excelData.length}件`,
+        "warning"
+      );
+      showToast("Excelダウンロード完了。操作ログに記録されました", "success");
+    }
+
+    // --- Excelインポート（外部にアップロードすることなく、ブラウザ内で更新） ---
+    function importFromExcel(event) {
+      if (!state.adminSession.isLoggedIn) return;
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const firstSheet = workbook.SheetNames[0];
+          const sheet = workbook.Sheets[firstSheet];
+          const rows = XLSX.utils.sheet_to_json(sheet);
+
+          let updateCount = 0;
+          rows.forEach(row => {
+            const appId = row["出願番号"];
+            if (!appId) return;
+
+            const applicant = state.applicants.find(app => app.id === appId);
+            if (applicant) {
+              if (row["入金ステータス"] !== undefined) applicant.feePaid = (row["入金ステータス"] === "入金済");
+              if (row["受験番号"] !== undefined && row["受験番号"] !== "未付与") applicant.examId = String(row["受験番号"]);
+              
+              if (row["書類審査ステータス"] !== undefined) {
+                const s = row["書類審査ステータス"];
+                if (s === "受験票済") applicant.status = "ticket_issued";
+                else if (s === "合格") applicant.status = "passed";
+                else if (s === "不合格") applicant.status = "failed";
+                else applicant.status = "reviewing";
+              }
+              if (row["校内職員コメント"] !== undefined) applicant.notes = String(row["校内職員コメント"]);
+              updateCount++;
+            }
+          });
+
+          saveToLocalStorage();
+          renderAdminTable();
+          if (state.currentApplicantId) selectApplicant(state.currentApplicantId);
+
+          addAuditLog(
+            "DATA_MODIFY", 
+            `Excelインポートにより、${updateCount}件の志願者ステータスを一括更新しました。`,
+            "info"
+          );
+          showToast("Excelインポート完了。データを更新しました。", "success");
+        } catch (err) {
+          console.error(err);
+          showToast("Excelファイルの読み込みに失敗しました。", "error");
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    // --- 提出資料(モック)プレビューモーダル ---
+    function openMockDoc(title, dataUrl) {
+      const modal = document.getElementById("modal-container");
+      const body = document.getElementById("modal-body-content");
+      modal.classList.remove("hidden");
+
+      body.innerHTML = `
+        <h4 class="text-sm font-bold text-slate-800 border-b pb-2 flex items-center gap-1">
+          <i data-lucide="file-text" class="text-indigo-600"></i> ${escapeHTML(title)}
+        </h4>
+        <div class="bg-slate-50 border p-4 rounded-xl flex items-center justify-center min-h-[300px] mt-3">
+          <img src="${dataUrl}" class="max-h-[300px] object-contain shadow rounded">
+        </div>
+        <p class="text-[10px] text-slate-400 text-center mt-2">※本システムは、画像をブラウザのメモリ内で完結させて表示しています</p>
+      `;
+      lucide.createIcons();
+    }
+
+    // --- 受験票プレビューモーダル ---
+    function openExamTicket(appId) {
+      const applicant = state.applicants.find(app => app.id === appId);
+      if (!applicant) return;
+
+      const modal = document.getElementById("modal-container");
+      const body = document.getElementById("modal-body-content");
+      modal.classList.remove("hidden");
+
+      body.innerHTML = `
+        <div class="border-4 border-indigo-900 p-4 rounded-xl space-y-4 bg-white">
+          <div class="text-center">
+            <h4 class="text-lg font-bold text-indigo-900">入学者選抜 受験票</h4>
+            <p class="text-xs text-slate-500">令和8年度 入試</p>
+          </div>
+          
+          <div class="flex gap-4 border-t border-b border-indigo-900 py-3">
+            <img src="${applicant.photo || MOCK_AVATARS[0]}" class="w-20 h-24 object-cover border">
+            <div class="space-y-1 text-xs">
+              <div><span class="text-slate-400">受験番号:</span> <span class="font-mono font-bold text-sm text-indigo-700">${applicant.examId}</span></div>
+              <div><span class="text-slate-400">氏名:</span> <span class="font-bold text-slate-800">${escapeHTML(applicant.name)}</span></div>
+              <div><span class="text-slate-400">志願区分:</span> <span>${escapeHTML(applicant.faculty)}</span></div>
+              <div><span class="text-slate-400">志望課程:</span> <span>${escapeHTML(applicant.course || '通信制の課程')}</span></div>
+            </div>
+          </div>
+
+          <div class="text-[10px] text-slate-500 space-y-1 leading-relaxed">
+            <p class="font-semibold text-slate-700">【試験当日注意事項】</p>
+            <p>1. 本票を必ず印刷または端末に保存して持参してください。</p>
+            <p>2. 試験開始30分前までに控室へ入室してください。</p>
+          </div>
+
+          <button onclick="window.print()" class="w-full py-2 bg-indigo-900 hover:bg-indigo-950 text-white rounded text-xs font-semibold flex items-center justify-center gap-1">
+            <i data-lucide="printer" class="w-3.5 h-3.5"></i> この受験票を印刷する
+          </button>
+        </div>
+      `;
+      lucide.createIcons();
+    }
+
+    // --- 合否判定通知書モーダル ---
+    function openPassFailResult(appId) {
+      const applicant = state.applicants.find(app => app.id === appId);
+      if (!applicant) return;
+
+      const modal = document.getElementById("modal-container");
+      const body = document.getElementById("modal-body-content");
+      modal.classList.remove("hidden");
+
+      const isPass = applicant.status === "passed";
+
+      body.innerHTML = `
+        <div class="border-2 ${isPass ? 'border-pink-500' : 'border-slate-400'} p-5 rounded-xl space-y-4 text-center bg-white">
+          <h4 class="text-md font-bold text-slate-800">選考判定結果通知書</h4>
+          <p class="text-xs text-slate-500 font-mono">出願ID: ${applicant.id}</p>
+          
+          <p class="text-sm text-slate-600 mt-4">${escapeHTML(applicant.name)} 殿</p>
+          
+          <div class="py-6 my-4 bg-slate-50 rounded-lg">
+            <span class="text-xs text-slate-400 block">選考判定</span>
+            <span class="text-2xl font-bold ${isPass ? 'text-pink-600' : 'text-slate-700'} tracking-wider">
+              ${isPass ? '【 合 格 】' : '【 不合格 】'}
+            </span>
+          </div>
+
+          <p class="text-xs text-slate-500 leading-relaxed text-left">
+            ${isPass 
+              ? '本校選考委員会による厳正な書類審査の結果、貴殿は合格と判定されましたのでここに通知いたします。追って入学案内に関する手続書類を郵送いたします。' 
+              : '慎重な審議を重ねました結果、誠に残念ながら今回は採用を見送らせていただく運びとなりました。ご期待に添えない結果となり恐縮ですが、何卒ご了承賜りますようお願い申し上げます。'}
+          </p>
+
+          <button onclick="closeModal()" class="w-full py-1.5 bg-slate-800 text-white rounded text-xs font-semibold mt-3">閉じる</button>
+        </div>
+      `;
+      lucide.createIcons();
+    }
+
+    function closeModal() {
+      document.getElementById("modal-container").classList.add("hidden");
+    }
+
+    // --- ユーティリティ関数 ---
+    function formatBirthDate(birthStr) {
+      if (!birthStr || birthStr.length !== 8) return birthStr;
+      const y = birthStr.substring(0, 4);
+      const m = birthStr.substring(4, 6);
+      const d = birthStr.substring(6, 8);
+      return `${y}年${m}月${d}日`;
+    }
+
+    function getFormattedDate(date) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, "0");
+      const d = String(date.getDate()).padStart(2, "0");
+      const hh = String(date.getHours()).padStart(2, "0");
+      const mm = String(date.getMinutes()).padStart(2, "0");
+      return `${y}-${m}-${d} ${hh}:${mm}`;
+    }
+
+    function showToast(message, type = "success") {
+      const toast = document.getElementById("toast");
+      const msgEl = document.getElementById("toast-message");
+      const iconEl = document.getElementById("toast-icon");
+      const iconContainer = document.getElementById("toast-icon-container");
+
+      msgEl.textContent = message;
+      
+      iconContainer.className = type === "success" ? "text-emerald-400" : type === "error" ? "text-rose-400" : "text-amber-400";
+      iconEl.setAttribute("data-lucide", type === "success" ? "check-circle-2" : type === "error" ? "alert-triangle" : "info");
+      lucide.createIcons();
+
+      toast.className = "fixed bottom-5 right-5 z-50 transform translate-y-0 opacity-100 bg-slate-900 text-white rounded-xl p-4 shadow-lg flex items-center gap-3 transition-all duration-300 pointer-events-auto";
+
+      setTimeout(() => {
+        toast.className = "fixed bottom-5 right-5 z-50 transform translate-y-10 opacity-0 bg-slate-900 text-white rounded-xl p-4 shadow-lg flex items-center gap-3 transition-all duration-300 pointer-events-none";
+      }, 4000);
+    }
+
+    function saveToLocalStorage() {
+      const encrypted = encryptData(JSON.stringify(state.applicants));
+      try {
+        localStorage.setItem("sec_admission_applicants", encrypted);
+      } catch (e) {
+        console.error("容量限界エラーを回避しました。古いキャッシュの削除を推奨します。");
+      }
+    }
+
+    function resetSystem() {
+      if (confirm("【警告】すべての志願データおよびセキュリティ監査ログが消去されます。よろしいですか？")) {
+        localStorage.removeItem("sec_admission_applicants");
+        localStorage.removeItem("sec_admission_audit_logs");
+        state.applicants = [];
+        state.auditLogs = [];
+        state.currentApplicantId = null;
+        
+        state.adminSession.isLoggedIn = false;
+        if (state.adminSession.timerInterval) {
+          clearInterval(state.adminSession.timerInterval);
+          state.adminSession.timerInterval = null;
+        }
+        
+        init();
+        showToast("システムを初期状態にリセットしました", "info");
+      }
+    }
+  </script>
+</body>
+</html>
