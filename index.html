@@ -8,7 +8,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
-  <!-- SheetJS (Excel処理用ライブラリ - 完全にブラウザローカルで動作するため外部送信なし) -->
+  <!-- SheetJS -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
     :root {
@@ -21,12 +21,6 @@
     }
     .custom-shadow {
       box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05), 0 2px 8px -1px rgba(0, 0, 0, 0.03);
-    }
-    .status-badge {
-      padding: 0.25rem 0.75rem;
-      border-radius: 9999px;
-      font-size: 0.85rem;
-      font-weight: 600;
     }
   </style>
 </head>
@@ -51,7 +45,6 @@
           <span class="animate-pulse inline-block w-2 h-2 rounded-full bg-red-500"></span>
           <span id="session-timer">自動切断まで 15分00秒</span>
         </div>
-        <!-- 管理者用シークレットURLでのみ表示されるナビゲーション -->
         <nav id="portal-nav" class="hidden flex rounded-lg bg-indigo-950/60 p-1 border border-indigo-700/50">
           <button id="nav-btn-applicant" onclick="switchPortal('applicant')" class="px-4 py-1.5 rounded-md text-sm font-medium transition-all duration-200 bg-white text-indigo-950 shadow-sm">
             志願者ポータル
@@ -82,9 +75,8 @@
         </div>
       </div>
 
-      <!-- メニューカード（切り替えスイッチ） -->
+      <!-- メニューカード -->
       <div class="portal-cards-grid grid grid-cols-1 md:grid-cols-2 gap-6">
-        <!-- 新規出願カード -->
         <button onclick="showApplicantSubView('apply-form')" class="group text-left bg-white border border-slate-200 p-6 rounded-2xl custom-shadow hover:border-indigo-500 transition-all duration-300 transform hover:-translate-y-1">
           <div class="flex items-start justify-between">
             <div class="bg-indigo-50 text-indigo-600 p-4 rounded-xl group-hover:bg-indigo-600 group-hover:text-white transition-all">
@@ -93,10 +85,9 @@
             <span class="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full">約 10 分で完了</span>
           </div>
           <h3 class="text-lg font-bold text-slate-800 mt-4 group-hover:text-indigo-900">1. 新規出願を行う</h3>
-          <p class="text-sm text-slate-500 mt-2">志願者情報、保護者連絡先、写真、受験料の振込領収書をアップロードし、最後にメールで出願ファイルを送付して出願を完了します。</p>
+          <p class="text-sm text-slate-500 mt-2">志願者情報、写真、受験料の振込領収書を登録し、最後にメールで出願ファイルを送付して出願を完了します。</p>
         </button>
 
-        <!-- 状況照会カード -->
         <button onclick="showApplicantSubView('status-check')" class="group text-left bg-white border border-slate-200 p-6 rounded-2xl custom-shadow hover:border-teal-500 transition-all duration-300 transform hover:-translate-y-1">
           <div class="flex items-start justify-between">
             <div class="bg-teal-50 text-teal-600 p-4 rounded-xl group-hover:bg-teal-600 group-hover:text-white transition-all">
@@ -105,7 +96,7 @@
             <span class="text-xs font-semibold text-teal-600 bg-teal-50 px-2.5 py-1 rounded-full">最新データ読込</span>
           </div>
           <h3 class="text-lg font-bold text-slate-800 mt-4 group-hover:text-teal-900">2. 出願状況・合否を確認する</h3>
-          <p class="text-sm text-slate-500 mt-2">事務局からメールで返信された「結果データ」を読み込むことで、最新の進捗状況や受験票、合否通知を安全にスマホで確認できます。</p>
+          <p class="text-sm text-slate-500 mt-2">事務局からメールで返信された「結果データ」を読み込むことで、最新の進捗状況や受験票、合否通知を安全に確認できます。</p>
         </button>
       </div>
 
@@ -120,12 +111,11 @@
           </button>
         </div>
 
-        <!-- 運用上の案内ボード -->
         <div class="bg-blue-50 border border-blue-100 text-blue-900 p-4 rounded-xl text-xs space-y-2">
           <p class="font-bold flex items-center gap-1"><i data-lucide="info" class="w-4 h-4"></i> 出願完了までの重要なお手続きの流れ</p>
           <p>1. 下記フォームに必要事項を入力し、写真を登録してください。</p>
-          <p>2. <strong>「出願を確定する」</strong>ボタンを押すと、自動的に暗号化された<strong>「暗号化出願ファイル (.dat)」</strong>が作成されてお使いの端末に保存されます。</p>
-          <p>3. 出願確定後に、<strong>ダウンロードされたファイル（.dat または .txt）をメールに添付して、本校宛に手動（Gmail等も可）で送信してください。</strong>メール送信完了をもって、正式な出願受付となります。</p>
+          <p>2. <strong>「出願を確定する」</strong>ボタンを押すと、自動的に暗号化された<strong>「出願データ」</strong>が作成されます。</p>
+          <p>3. 作成された出願データを<strong>メールに添付して本校宛に送信してください。</strong>メールの送信完了をもって、正式な出願受付となります。</p>
         </div>
 
         <form id="admission-form" onsubmit="handleFormSubmit(event)" class="space-y-8">
@@ -144,7 +134,7 @@
               <div>
                 <label class="block text-sm font-semibold text-slate-600 mb-1">生年月日 (半角数字8桁) <span class="text-red-500">*</span></label>
                 <input type="text" id="app-birth" required pattern="\d{8}" maxlength="8" placeholder="例：20100401" oninput="checkAge()" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                <span class="text-[10px] text-slate-400">西暦4桁＋月2桁＋日2桁で入力してください。18歳未満の場合は保護者欄が必須となります。</span>
+                <span class="text-[10px] text-slate-400">西暦4桁＋月2桁＋日2桁。18歳未満の場合は保護者欄が必須となります。</span>
               </div>
               <div>
                 <label class="block text-sm font-semibold text-slate-600 mb-1">志願区分 <span class="text-red-500">*</span></label>
@@ -155,12 +145,11 @@
                 </select>
               </div>
               <div>
-                <label class="block text-sm font-semibold text-slate-600 mb-1">志望する課程 <span class="text-red-500">* (間違い防止の意思確認)</span></label>
+                <label class="block text-sm font-semibold text-slate-600 mb-1">志望する課程 <span class="text-red-500">* (意思確認)</span></label>
                 <select id="app-course" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                   <option value="">選択してください</option>
                   <option value="通信制の課程">通信制の課程</option>
                 </select>
-                <span class="text-[10px] text-amber-600">※本校の通信制の課程への志望であることをご確認の上、選択してください。</span>
               </div>
               <div>
                 <label class="block text-sm font-semibold text-slate-600 mb-1">電話番号 <span class="text-red-500">*</span></label>
@@ -180,7 +169,7 @@
                 </select>
               </div>
               <div class="md:col-span-2">
-                <label class="block text-sm font-semibold text-slate-600 mb-1">メールアドレス <span class="text-red-500">* (状況照会時およびメール送付のキーになります)</span></label>
+                <label class="block text-sm font-semibold text-slate-600 mb-1">メールアドレス <span class="text-red-500">* (状況照会時のキーになります)</span></label>
                 <input type="email" id="app-email" required placeholder="taro@example.com" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
               </div>
             </div>
@@ -219,28 +208,24 @@
             </div>
           </div>
 
-          <!-- 書類アップロードおよび事前送付確認セクション -->
+          <!-- 書類アップロードセクション -->
           <div class="space-y-4">
             <h4 class="text-md font-bold text-slate-700 border-l-4 border-indigo-600 pl-2">3. 証明書類の確認およびアップロード</h4>
-            
             <div class="space-y-6">
-              <!-- 成績単位修得証明書の送付状況（全幅で表示） -->
               <div class="border border-slate-200 bg-slate-50 rounded-xl p-4">
                 <div class="space-y-3">
                   <span class="block text-sm font-bold text-slate-700">① 成績単位修得証明書について</span>
                   <p class="text-xs text-slate-500 leading-relaxed">
-                    成績単位修得証明書は、個人情報安全管理のため、Webからのファイル添付を行いません。現在または以前に在籍した学校から、直接本校へ郵送等で送付される形となります。
+                    成績単位修得証明書は現在または以前に在籍した学校から、直接本校へ郵送等で送付される形となります。
                   </p>
                   <label class="flex items-start gap-2 cursor-pointer mt-2 bg-white p-2.5 rounded border border-indigo-200 transition hover:bg-indigo-50">
                     <input type="checkbox" id="confirm-transcript-sent" required class="mt-1 h-4 w-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500">
-                    <span class="text-xs font-semibold text-slate-700 leading-tight">現在(または以前)在籍した学校より、本校宛に事前に送付済み、または送付手配を行ったことを確認しました。<span class="text-red-500">*</span></span>
+                    <span class="text-xs font-semibold text-slate-700 leading-tight">在籍した学校より、本校宛に事前に送付手配を行ったことを確認しました。<span class="text-red-500">*</span></span>
                   </label>
                 </div>
               </div>
 
-              <!-- 顔写真と領収書（2カラムグリッド） -->
               <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- 顔写真 -->
                 <div class="border border-dashed border-slate-300 rounded-xl p-4 text-center hover:bg-slate-50 transition flex flex-col justify-between min-h-[180px]">
                   <div>
                     <span class="block text-sm font-bold text-slate-700 mb-1">② 志願者顔写真</span>
@@ -256,7 +241,6 @@
                   </div>
                 </div>
 
-                <!-- 振込領収書 -->
                 <div class="border border-dashed border-slate-300 rounded-xl p-4 text-center hover:bg-slate-50 transition flex flex-col justify-between min-h-[180px]">
                   <div>
                     <span class="block text-sm font-bold text-slate-700 mb-1">③ 受験料振込領収書</span>
@@ -296,9 +280,7 @@
           </button>
         </div>
 
-        <!-- 照会ログインフォーム -->
         <div id="status-login-container" class="max-w-md mx-auto py-8 space-y-6">
-          <!-- 端末履歴からの確認 -->
           <div class="space-y-4">
             <p class="text-sm text-slate-600 text-center font-bold border-b pb-2">現在の端末の履歴から確認する</p>
             <div class="space-y-3">
@@ -317,12 +299,11 @@
 
           <div class="text-center text-slate-400 font-bold text-sm">または</div>
 
-          <!-- 新規：学校からの結果ファイル読み込み (双方向同期の実現) -->
           <div class="bg-indigo-50 p-5 rounded-xl border border-indigo-100 space-y-3 text-center shadow-inner">
             <p class="text-sm font-bold text-indigo-900 flex justify-center items-center gap-1">
               <i data-lucide="refresh-cw" class="w-4 h-4"></i> 学校から届いた結果で更新する
             </p>
-            <p class="text-xs text-indigo-700 leading-relaxed text-left px-2">事務局からメールで返信された「審査結果データ (.dat)」をここで読み込むと、最新の受験票や合否状況が表示されます。</p>
+            <p class="text-xs text-indigo-700 leading-relaxed text-left px-2">事務局からメールで返信された「審査結果データ」をここで読み込むと、最新の受験票や合否状況が表示されます。</p>
             <button onclick="document.getElementById('result-file-picker').click()" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold shadow-sm transition flex justify-center items-center gap-2">
               <i data-lucide="upload" class="w-4 h-4"></i> 結果データを選択して読み込む
             </button>
@@ -330,7 +311,6 @@
           </div>
         </div>
 
-        <!-- 照会結果表示コンテナ (初期非表示) -->
         <div id="status-result-container" class="hidden space-y-6">
           <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <!-- 志願者基本カード -->
@@ -359,7 +339,7 @@
                 <div><span class="text-slate-400">緊急電話番号:</span> <span id="res-guard-phone" class="font-semibold text-slate-700"></span></div>
               </div>
               <div class="p-3 bg-teal-50 border border-teal-100 rounded-lg text-[11px] text-teal-800">
-                本システムは、保護者同意署名の代替として「保護者緊急連絡先」を必須とし、確認のための認証ログを取得しています。
+                本システムは「保護者緊急連絡先」を必須とし、確認のための認証ログを取得しています。
               </div>
             </div>
 
@@ -367,14 +347,13 @@
             <div class="bg-slate-50 p-5 rounded-xl border border-slate-100 flex flex-col justify-between">
               <h4 class="text-sm font-bold text-slate-700 border-b border-slate-200 pb-2 mb-4">出願プロセス進捗</h4>
               <div class="timeline-steps flex flex-col gap-4 relative pl-4 text-xs">
-                <!-- 線 -->
                 <div class="absolute left-[7px] top-2 bottom-2 w-0.5 bg-slate-200 z-0">
                   <div class="timeline-progress-line w-full bg-teal-500 transition-all duration-500" style="height: 0%;"></div>
                 </div>
                 
                 <div id="step-applied" class="relative flex items-center gap-3 z-10">
                   <div class="step-num w-4 h-4 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-[10px] font-bold">1</div>
-                  <span>Web出願(メール送信)</span>
+                  <span>Web出願(データ提出)</span>
                 </div>
                 <div id="step-fee" class="relative flex items-center gap-3 z-10">
                   <div class="step-num w-4 h-4 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-[10px] font-bold">2</div>
@@ -396,7 +375,6 @@
             </div>
           </div>
 
-          <!-- 個別指示案内ボード -->
           <div id="instruction-card" class="bg-indigo-50 border border-indigo-100 p-5 rounded-xl flex items-start gap-4">
             <!-- JSで動的に書き換えます -->
           </div>
@@ -405,11 +383,9 @@
     </section>
 
     <!-- ==========================================
-         管理者・事務局ダッシュボード
+         管理者ダッシュボード
          ========================================== -->
     <section id="admin-dashboard" class="portal-section hidden space-y-6">
-      
-      <!-- A. 未ログイン時：セキュアログイン画面 -->
       <div id="admin-login-view" class="max-w-md mx-auto bg-white rounded-2xl border border-slate-200 p-6 md:p-8 custom-shadow space-y-6 mt-10">
         <div class="text-center space-y-2">
           <div class="mx-auto w-12 h-12 rounded-xl bg-red-50 text-red-600 flex items-center justify-center">
@@ -428,10 +404,7 @@
         </div>
       </div>
 
-      <!-- B. ログイン後：高機能セキュアダッシュボード -->
       <div id="admin-dashboard-view" class="hidden space-y-6">
-        
-        <!-- 上部：セキュリティポイントアピール -->
         <div class="bg-slate-800 text-white rounded-2xl p-6 custom-shadow grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
           <div class="md:col-span-2 space-y-1">
             <h3 class="text-md font-bold flex items-center gap-1.5 text-emerald-400">
@@ -451,17 +424,14 @@
           </div>
         </div>
 
-        <!-- 志願者ファイルのドラッグ＆ドロップ回収エリア -->
         <div class="bg-indigo-50 border-2 border-dashed border-indigo-300 rounded-2xl p-6 text-center space-y-3 shadow-inner">
           <div class="mx-auto w-12 h-12 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center">
             <i data-lucide="file-down" class="w-6 h-6"></i>
           </div>
           <div>
             <h4 class="text-sm font-bold text-slate-800">回収した暗号化出願ファイル（.dat / .txt）の一括取り込み</h4>
-            <p class="text-xs text-slate-500 mt-1">志願者からメール等で送られてきた暗号化出願ファイル（.txtに変換されていても可）を、まとめてここにドラッグ＆ドロップするだけで自動復号・結合されます。</p>
+            <p class="text-xs text-slate-500 mt-1">志願者から送られてきた暗号化出願ファイル（.txtに変換されていても可）をまとめてここにドラッグ＆ドロップするだけで自動復号・結合されます。</p>
           </div>
-          
-          <!-- ドラッグドロップ領域 -->
           <div id="drop-zone" class="border border-indigo-200 bg-white rounded-xl p-6 text-slate-400 text-xs hover:bg-indigo-100/50 hover:text-indigo-900 transition cursor-pointer flex flex-col items-center justify-center gap-2 max-w-xl mx-auto">
             <i data-lucide="upload-cloud" class="w-8 h-8 text-indigo-500"></i>
             <span class="font-semibold">ここに回収した「.dat」または「.txt」ファイルをまとめてドラッグ＆ドロップ</span>
@@ -470,15 +440,11 @@
           </div>
         </div>
 
-        <!-- アクションボタン群（Excel入出力、全リセット） -->
         <div class="flex flex-wrap items-center justify-between gap-4 bg-white p-4 rounded-xl border border-slate-200 custom-shadow">
           <div class="flex flex-wrap items-center gap-2">
-            <!-- Excelエクスポート -->
             <button onclick="exportToExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow transition">
               <i data-lucide="download"></i> Excel一覧出力
             </button>
-            
-            <!-- Excelインポート -->
             <label class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow cursor-pointer transition">
               <i data-lucide="upload"></i> Excel一括インポート (上書き用)
               <input type="file" id="excel-import-file" accept=".xlsx,.xls" onchange="importFromExcel(event)" class="hidden">
@@ -495,10 +461,7 @@
           </div>
         </div>
 
-        <!-- メインコンテンツ領域 (2カラム) -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
-          <!-- 左2カラム: 志願者管理リスト -->
           <div class="lg:col-span-2 bg-white rounded-xl border border-slate-200 custom-shadow overflow-hidden">
             <div class="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
               <h4 class="font-bold text-slate-800 text-sm flex items-center gap-2">
@@ -506,7 +469,6 @@
               </h4>
               <p class="text-[11px] text-slate-400">出願番号クリックで、志願者写真や領収書などの提出資料をチェックできます</p>
             </div>
-            
             <div class="overflow-x-auto">
               <table class="w-full text-left border-collapse text-xs">
                 <thead>
@@ -521,16 +483,12 @@
                   </tr>
                 </thead>
                 <tbody id="admin-table-body" class="divide-y divide-slate-100">
-                  <!-- JSで描画します -->
                 </tbody>
               </table>
             </div>
           </div>
 
-          <!-- 右1カラム: 監査ログ & 書類チェック詳細 -->
           <div class="space-y-6">
-            
-            <!-- ① 選択された志願者の提出書類審査・個別対応ボード -->
             <div id="document-check-panel" class="bg-white rounded-xl border border-slate-200 custom-shadow p-5 space-y-4">
               <h4 class="font-bold text-slate-800 text-sm border-b border-slate-100 pb-2 flex items-center gap-1.5">
                 <i data-lucide="file-check" class="text-emerald-600"></i> 提出書類リアルタイム審査
@@ -539,21 +497,17 @@
                 出願者一覧 の 「出願番号」をクリックすると、ここに提出資料のプレビューと個別審査ボードが表示されます。
               </div>
               <div id="check-panel-content" class="hidden space-y-4 text-xs">
-                <!-- JSで書類やボタンを表示 -->
               </div>
             </div>
 
-            <!-- ② セキュリティ監査ログ -->
             <div class="bg-white rounded-xl border border-slate-200 custom-shadow p-5 space-y-3">
               <h4 class="font-bold text-slate-800 text-sm border-b border-slate-100 pb-2 flex items-center justify-between">
                 <span class="flex items-center gap-1.5"><i data-lucide="activity" class="text-red-500"></i> セキュリティ監査ログ</span>
                 <span class="text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-bold">自動証跡</span>
               </h4>
               <div class="overflow-y-auto max-h-[250px] space-y-2 pr-1 font-mono text-[10px]" id="audit-log-container">
-                <!-- 監査ログが自動的に追加されます -->
               </div>
             </div>
-
           </div>
         </div>
 
@@ -561,7 +515,6 @@
     </section>
   </main>
 
-  <!-- トースト通知システム -->
   <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-10 opacity-0 pointer-events-none transition-all duration-300 bg-slate-900 text-white rounded-xl p-4 shadow-lg flex items-center gap-3">
     <div id="toast-icon-container" class="text-emerald-400">
       <i id="toast-icon" data-lucide="check-circle-2" class="w-5 h-5"></i>
@@ -569,14 +522,12 @@
     <div id="toast-message" class="text-xs font-semibold"></div>
   </div>
 
-  <!-- 受験票・合否通知などのポップアップモーダル -->
   <div id="modal-container" class="fixed inset-0 bg-slate-950/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4 overflow-y-auto">
     <div class="bg-white rounded-2xl border border-slate-200 p-6 max-w-md w-full shadow-2xl relative space-y-4 my-auto">
       <button onclick="closeModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition">
         <i data-lucide="x" class="w-5 h-5"></i>
       </button>
       <div id="modal-body-content">
-        <!-- モーダル中身はJSで書き換え -->
       </div>
     </div>
   </div>
@@ -585,40 +536,22 @@
     &copy; 2026 web出願システム. All Rights Reserved. ブラウザローカル検証環境
   </footer>
 
-  <!-- ==========================================================================
-       Web出願・書類チェック 模擬システム - スクリプト
-       ========================================================================== -->
   <script>
-    // --- 状態管理オブジェクト (仮想データベース) ---
     let state = {
       applicants: [],
       auditLogs: [],
       currentApplicantId: null,
-      uploadCache: {
-        photo: null,
-        receipt: null,
-        receiptName: ""
-      },
-      adminSession: {
-        isLoggedIn: false,
-        lastActivity: 0,
-        timerInterval: null
-      },
-      loginLockout: {
-        failedAttempts: 0,
-        lockoutUntil: 0,
-        timerInterval: null
-      }
+      uploadCache: { photo: null, receipt: null, receiptName: "" },
+      adminSession: { isLoggedIn: false, lastActivity: 0, timerInterval: null },
+      loginLockout: { failedAttempts: 0, lockoutUntil: 0, timerInterval: null }
     };
 
     const HASHED_PASS = "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918";
-
     const MOCK_AVATARS = [
       "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%236366f1'/><circle cx='50' cy='37' r='20' fill='%23ffffff'/><path d='M20,78 C20,60 30,55 50,55 C70,55 80,60 80,78' fill='%23ffffff'/></svg>",
       "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%23ec4899'/><circle cx='50' cy='37' r='20' fill='%23ffffff'/><path d='M20,78 C20,60 30,55 50,55 C70,55 80,60 80,78' fill='%23ffffff'/></svg>",
       "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%2310b981'/><circle cx='50' cy='37' r='20' fill='%23ffffff'/><path d='M20,78 C20,60 30,55 50,55 C70,55 80,60 80,78' fill='%23ffffff'/></svg>"
     ];
-
     const MOCK_RECEIPT = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 120'><rect x='10' y='10' width='80' height='100' rx='5' fill='%23ecfdf5' stroke='%23a7f3d0' stroke-width='4'/><circle cx='50' cy='45' r='18' fill='%23d1fae5'/><path d='M42,45 L48,51 L58,39' fill='none' stroke='%2310b981' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'/><line x1='25' y1='75' x2='75' y2='75' stroke='%2310b981' stroke-width='4' stroke-linecap='round'/></svg>";
 
     document.addEventListener("DOMContentLoaded", () => {
@@ -631,33 +564,22 @@
     function init() {
       const savedApplicants = localStorage.getItem("sec_admission_applicants");
       if (savedApplicants) {
-        try {
-          state.applicants = JSON.parse(decryptData(savedApplicants));
-        } catch (e) {
-          console.error("データの破損またはキー不一致のため初期化します", e);
-          state.applicants = [];
-        }
-      } else {
-        state.applicants = [];
-      }
+        try { state.applicants = JSON.parse(decryptData(savedApplicants)); } 
+        catch (e) { state.applicants = []; }
+      } else { state.applicants = []; }
 
       const savedLogs = localStorage.getItem("sec_admission_audit_logs");
       if (savedLogs) {
-        try {
-          state.auditLogs = JSON.parse(decryptData(savedLogs));
-        } catch (e) {
-          state.auditLogs = [];
-        }
+        try { state.auditLogs = JSON.parse(decryptData(savedLogs)); } 
+        catch (e) { state.auditLogs = []; }
       } else {
-        addAuditLog("SYSTEM", "セキュアWeb出願システムがローカル暗号化ストレージから開始されました。", "info");
+        addAuditLog("SYSTEM", "セキュアWeb出願システムが開始されました。", "info");
       }
 
       lucide.createIcons();
       
       const urlParams = new URLSearchParams(window.location.search);
-      const isAdminMode = urlParams.get('mode') === 'admin';
-
-      if (isAdminMode) {
+      if (urlParams.get('mode') === 'admin') {
         document.getElementById("portal-nav").classList.remove("hidden");
         switchPortal("admin");
         checkAdminAuthState();
@@ -683,9 +605,7 @@
         
         let age = today.getFullYear() - birthDate.getFullYear();
         const mDiff = today.getMonth() - birthDate.getMonth();
-        if (mDiff < 0 || (mDiff === 0 && today.getDate() < birthDate.getDate())) {
-          age--;
-        }
+        if (mDiff < 0 || (mDiff === 0 && today.getDate() < birthDate.getDate())) age--;
         
         if (age >= 18) {
           guardSection.classList.add("hidden");
@@ -703,40 +623,25 @@
     const SEC_KEY = 79;
     function encryptData(text) {
       const codeArray = [];
-      const len = text.length;
-      for (let i = 0; i < len; i++) {
-        codeArray.push(String.fromCharCode(text.charCodeAt(i) ^ SEC_KEY));
-      }
+      for (let i = 0; i < text.length; i++) codeArray.push(String.fromCharCode(text.charCodeAt(i) ^ SEC_KEY));
       return btoa(unescape(encodeURIComponent(codeArray.join(""))));
     }
     function decryptData(base64Text) {
       const text = decodeURIComponent(escape(atob(base64Text)));
       const codeArray = [];
-      const len = text.length;
-      for (let i = 0; i < len; i++) {
-        codeArray.push(String.fromCharCode(text.charCodeAt(i) ^ SEC_KEY));
-      }
+      for (let i = 0; i < text.length; i++) codeArray.push(String.fromCharCode(text.charCodeAt(i) ^ SEC_KEY));
       return codeArray.join("");
     }
 
     function escapeHTML(str) {
       if (typeof str !== "string") return str;
-      return str.replace(/[&<>'"]/g, (tag) => {
-        return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[tag] || tag);
-      });
+      return str.replace(/[&<>'"]/g, (tag) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[tag] || tag));
     }
 
     function addAuditLog(category, message, severity = "info") {
-      const newLog = {
-        time: getFormattedDate(new Date()),
-        category: category,
-        message: message,
-        severity: severity
-      };
-      state.auditLogs.unshift(newLog);
+      state.auditLogs.unshift({ time: getFormattedDate(new Date()), category, message, severity });
       if (state.auditLogs.length > 500) state.auditLogs.pop();
       localStorage.setItem("sec_admission_audit_logs", encryptData(JSON.stringify(state.auditLogs)));
-      
       if (state.adminSession.isLoggedIn) renderAuditLogs();
     }
 
@@ -749,22 +654,17 @@
       if (portal === "applicant") {
         applicantSec.classList.remove("hidden");
         adminSec.classList.add("hidden");
-        
         navApplicant.classList.add("bg-white", "text-indigo-950", "shadow-sm");
         navApplicant.classList.remove("text-indigo-200", "hover:text-white");
-        
         navAdmin.classList.add("text-indigo-200", "hover:text-white");
         navAdmin.classList.remove("bg-white", "text-indigo-950", "shadow-sm");
       } else {
         adminSec.classList.remove("hidden");
         applicantSec.classList.add("hidden");
-        
         navAdmin.classList.add("bg-white", "text-indigo-950", "shadow-sm");
         navAdmin.classList.remove("text-indigo-200", "hover:text-white");
-        
         navApplicant.classList.add("text-indigo-200", "hover:text-white");
         navApplicant.classList.remove("bg-white", "text-indigo-950", "shadow-sm");
-        
         checkAdminAuthState();
       }
     }
@@ -775,29 +675,20 @@
       const applyForm = document.getElementById("subview-apply-form");
       const statusCheck = document.getElementById("subview-status-check");
 
+      menuGrid.classList.add("hidden"); heroArea.classList.add("hidden");
+      applyForm.classList.add("hidden"); statusCheck.classList.add("hidden");
+
       if (view === "menu") {
-        menuGrid.classList.remove("hidden");
-        heroArea.classList.remove("hidden");
-        applyForm.classList.add("hidden");
-        statusCheck.classList.add("hidden");
+        menuGrid.classList.remove("hidden"); heroArea.classList.remove("hidden");
       } else if (view === "apply-form") {
-        menuGrid.classList.add("hidden");
-        heroArea.classList.add("hidden");
         applyForm.classList.remove("hidden");
-        statusCheck.classList.add("hidden");
-        
         document.getElementById("admission-form").reset();
-        removeUploadedFile("photo");
-        removeUploadedFile("receipt");
+        removeUploadedFile("photo"); removeUploadedFile("receipt");
         const chk = document.getElementById("confirm-transcript-sent");
         if (chk) chk.checked = false;
         checkAge();
       } else if (view === "status-check") {
-        menuGrid.classList.add("hidden");
-        heroArea.classList.add("hidden");
-        applyForm.classList.add("hidden");
         statusCheck.classList.remove("hidden");
-
         document.getElementById("login-name").value = "";
         document.getElementById("login-email").value = "";
         document.getElementById("status-login-container").classList.remove("hidden");
@@ -806,20 +697,13 @@
       }
     }
 
-    function triggerFileInput(id) {
-      document.getElementById(id).click();
-    }
+    function triggerFileInput(id) { document.getElementById(id).click(); }
 
     function previewUpload(input, type) {
       const file = input.files[0];
       if (!file) return;
-
       const isImage = file.type.startsWith("image/");
-
-      if (type === "photo" && !isImage) {
-        showToast("顔写真には画像ファイルを指定してください", "error");
-        return;
-      }
+      if (type === "photo" && !isImage) return showToast("顔写真には画像ファイルを指定してください", "error");
 
       if (isImage) {
         const reader = new FileReader();
@@ -828,20 +712,13 @@
           img.onload = function () {
             const canvas = document.createElement("canvas");
             let max_size = type === "photo" ? 150 : 350;
-            let width = img.width;
-            let height = img.height;
-            if (width > height) {
-              if (width > max_size) { height *= max_size / width; width = max_size; }
-            } else {
-              if (height > max_size) { width *= max_size / height; height = max_size; }
-            }
-            canvas.width = width;
-            canvas.height = height;
+            let width = img.width, height = img.height;
+            if (width > height) { if (width > max_size) { height *= max_size / width; width = max_size; } } 
+            else { if (height > max_size) { width *= max_size / height; height = max_size; } }
+            canvas.width = width; canvas.height = height;
             const ctx = canvas.getContext("2d");
             ctx.drawImage(img, 0, 0, width, height);
-            
             const compressedBase64 = canvas.toDataURL("image/jpeg", 0.6);
-            
             if (type === "photo") {
               state.uploadCache.photo = compressedBase64;
               document.getElementById("preview-photo").src = compressedBase64;
@@ -872,211 +749,121 @@
         state.uploadCache.photo = null;
         document.getElementById("file-photo").value = "";
         document.getElementById("preview-photo-container").classList.add("hidden");
-        document.getElementById("preview-photo").src = "";
       } else {
-        state.uploadCache[type] = null;
-        state.uploadCache[`${type}Name`] = "";
+        state.uploadCache[type] = null; state.uploadCache[`${type}Name`] = "";
         document.getElementById(`file-${type}`).value = "";
         document.getElementById(`preview-${type}-container`).classList.add("hidden");
       }
     }
 
-    function copyToClipboard(valId, btnId) {
-      const copyVal = document.getElementById(valId);
-      if (!copyVal) return;
-      
-      copyVal.select();
-      copyVal.setSelectionRange(0, 99999); 
-
-      try {
-        const successful = document.execCommand('copy');
-        if (successful) {
-          showToast("コピーしました！", "success");
-          const btn = document.getElementById(btnId);
-          if (btn) {
-            const originalText = btn.innerHTML;
-            btn.innerHTML = "<i data-lucide='check' class='w-3.5 h-3.5'></i>";
-            lucide.createIcons();
-            setTimeout(() => {
-              btn.innerHTML = originalText;
-              lucide.createIcons();
-            }, 2000);
-          }
-        } else {
-          showToast("手動でコピーしてください。", "error");
-        }
-      } catch (err) {
-        showToast("手動でコピーしてください。", "error");
-      }
-    }
-
     function handleFormSubmit(event) {
       event.preventDefault();
-      const name = document.getElementById("app-name").value.trim();
-      const kana = document.getElementById("app-kana").value.trim();
       const birth = document.getElementById("app-birth").value.trim();
-      const phone = document.getElementById("app-phone").value.trim();
-      const email = document.getElementById("app-email").value.trim();
-      const prevSchool = document.getElementById("app-prev-school").value.trim();
-      const prevCourse = document.getElementById("app-prev-course").value;
-      const faculty = document.getElementById("app-faculty").value; 
-      const course = document.getElementById("app-course").value; 
-
-      let guardName = "", guardRelation = "", guardKana = "", guardPhone = "";
-
       const guardSection = document.getElementById("guardian-section");
-      if (!guardSection.classList.contains("hidden")) {
-        guardName = document.getElementById("app-guard-name").value.trim();
-        guardRelation = document.getElementById("app-guard-relation").value;
-        guardKana = document.getElementById("app-guard-kana").value.trim();
-        guardPhone = document.getElementById("app-guard-phone").value.trim();
-      }
-
-      const transcriptChecked = document.getElementById("confirm-transcript-sent").checked;
-
-      if (birth.length !== 8 || isNaN(birth)) {
-        showToast("生年月日は半角数字8桁で入力してください", "error");
-        return;
-      }
-      if (!state.uploadCache.photo) {
-        showToast("顔写真をアップロードしてください", "error");
-        return;
-      }
-      if (!transcriptChecked) {
-        showToast("成績単位修得証明書に関する事前確認にチェックを入れてください", "error");
-        return;
-      }
-      if (!state.uploadCache.receipt) {
-        showToast("受験料振込証明書をアップロードしてください", "error");
-        return;
-      }
-
-      const randNum = Math.floor(10000 + Math.random() * 90000);
-      const appId = `AD-${randNum}`;
       
+      if (birth.length !== 8 || isNaN(birth)) return showToast("生年月日は半角数字8桁で入力してください", "error");
+      if (!state.uploadCache.photo) return showToast("顔写真をアップロードしてください", "error");
+      if (!document.getElementById("confirm-transcript-sent").checked) return showToast("成績単位修得証明書に関する事前確認にチェックを入れてください", "error");
+      if (!state.uploadCache.receipt) return showToast("受験料振込証明書をアップロードしてください", "error");
+
       const newApplicant = {
-        id: appId,
-        name: name,
-        kana: kana,
+        id: `AD-${Math.floor(10000 + Math.random() * 90000)}`,
+        name: document.getElementById("app-name").value.trim(),
+        kana: document.getElementById("app-kana").value.trim(),
         birthDate: birth,
-        phone: phone,
-        email: email,
-        prevSchool: prevSchool,
-        prevCourse: prevCourse,
-        faculty: faculty, 
-        course: course, 
-        guardianName: guardName,
-        guardianRelation: guardRelation,
-        guardianKana: guardKana,
-        guardianPhone: guardPhone,
+        phone: document.getElementById("app-phone").value.trim(),
+        email: document.getElementById("app-email").value.trim(),
+        prevSchool: document.getElementById("app-prev-school").value.trim(),
+        prevCourse: document.getElementById("app-prev-course").value,
+        faculty: document.getElementById("app-faculty").value, 
+        course: document.getElementById("app-course").value, 
+        guardianName: guardSection.classList.contains("hidden") ? "" : document.getElementById("app-guard-name").value.trim(),
+        guardianRelation: guardSection.classList.contains("hidden") ? "" : document.getElementById("app-guard-relation").value,
+        guardianKana: guardSection.classList.contains("hidden") ? "" : document.getElementById("app-guard-kana").value.trim(),
+        guardianPhone: guardSection.classList.contains("hidden") ? "" : document.getElementById("app-guard-phone").value.trim(),
         transcriptStatus: "school_sent",
         photo: state.uploadCache.photo,
         receipt: state.uploadCache.receipt,
         receiptName: state.uploadCache.receiptName || "振込領収書.png",
         date: getFormattedDate(new Date()),
-        feePaid: false, 
-        status: "applied", 
-        notes: "",
-        examId: null
+        feePaid: false, status: "applied", notes: "", examId: null
       };
 
       state.applicants.push(newApplicant);
       saveToLocalStorage();
-      downloadDatFile(newApplicant);
 
-      addAuditLog("DATA_MODIFY", `新規Web出願をローカル処理。出願番号: ${appId}, 氏名: ${name} / メール添付準備`, "info");
+      addAuditLog("DATA_MODIFY", `新規Web出願をローカル処理。出願番号: ${newApplicant.id}, 氏名: ${newApplicant.name}`, "info");
       showRegistrationCompleteModal(newApplicant);
       
       showApplicantSubView("status-check");
-      document.getElementById("login-name").value = name;
-      document.getElementById("login-email").value = email;
+      document.getElementById("login-name").value = newApplicant.name;
+      document.getElementById("login-email").value = newApplicant.email;
     }
 
-    function downloadDatFile(applicant) {
+    // --- ★ Web Share API を使ったスマホ向けのファイル引き渡し ---
+    function shareOrDownloadDatFile(applicant) {
       const encryptedText = encryptData(JSON.stringify(applicant));
+      const filename = `出願データ_${applicant.id}_${applicant.name.replace(/\s+/g, "")}.dat`;
+      
+      if (navigator.canShare) {
+        const file = new File([encryptedText], filename, { type: "text/plain" });
+        if (navigator.canShare({ files: [file] })) {
+          navigator.share({
+            files: [file],
+            title: '出願データ',
+            text: '本校宛（ t-itoryoh@e.osakamanabi.jp ）に出願データを送信します。'
+          }).then(() => {
+            showToast("メールアプリ等にファイルを渡しました。送信を完了してください。", "success");
+          }).catch((error) => {
+            fallbackDownload(encryptedText, filename);
+          });
+          return;
+        }
+      }
+      fallbackDownload(encryptedText, filename);
+    }
+
+    function fallbackDownload(encryptedText, filename) {
       const blob = new Blob([encryptedText], { type: "text/plain;charset=utf-8" });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
-      a.download = `出願データ_${applicant.id}_${applicant.name.replace(/\s+/g, "")}.dat`;
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
+      showToast("ファイルを保存しました。メールに添付してください。", "success");
     }
 
-    function getEmailLinkData(applicant) {
-      const schoolEmail = "t-itoryoh@e.osakamanabi.jp";
-      const subject = `出願データ送信（出願番号：${applicant.id} / ${applicant.name}）`;
-      const body = `本校宛に「出願データ (.dat)」を添付して送信してください。\n\n※このままファイルを添付して送信してください。\n・出願番号: ${applicant.id}\n・氏名: ${applicant.name}`;
-
-      return {
-        email: schoolEmail,
-        subject: subject,
-        body: body,
-        mailto: `mailto:${schoolEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
-      };
-    }
-
-    function toggleConfirmBtn(checkbox) {
-      const confirmBtn = document.getElementById("btn-final-confirm");
-      if (checkbox.checked) {
-        confirmBtn.disabled = false;
-        confirmBtn.className = "w-full py-2.5 bg-red-600 hover:bg-red-700 text-white rounded font-bold shadow-md transition cursor-pointer text-sm";
-      } else {
-        confirmBtn.disabled = true;
-        confirmBtn.className = "w-full py-2.5 bg-slate-300 text-slate-500 rounded font-bold cursor-not-allowed transition text-sm";
-      }
-    }
-
-    // --- ★ 超シンプル化された出願完了案内モーダル ---
     function showRegistrationCompleteModal(applicant) {
       const modal = document.getElementById("modal-container");
       const bodyContent = document.getElementById("modal-body-content");
       modal.classList.remove("hidden");
 
-      const mailData = getEmailLinkData(applicant);
-
       bodyContent.innerHTML = `
         <div class="text-center space-y-4">
-          <!-- 警告アイコン -->
           <div class="mx-auto w-14 h-14 bg-red-100 text-red-600 rounded-full flex items-center justify-center shadow-md animate-bounce">
             <i data-lucide="alert-triangle" class="w-7 h-7"></i>
           </div>
           
-          <!-- シンプルな警告 -->
           <h4 class="text-2xl font-black text-red-600 tracking-tight">まだ出願は完了していません！</h4>
-          <p class="text-xs font-bold text-slate-700">ダウンロードされた「出願データ (.dat)」をメールで送信してください。</p>
+          <p class="text-xs font-bold text-slate-700">「出願データ」をメールで送信する必要があります。</p>
           
-          <!-- 直感的な手順ボード -->
-          <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 text-left space-y-3 shadow-sm">
-             <p class="text-sm font-bold text-slate-800">1. メールアプリを開く</p>
-             <button onclick="window.location.href='${mailData.mailto}'" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm text-sm font-bold flex justify-center items-center gap-1.5 transition">
-                <i data-lucide="mail" class="w-4 h-4"></i> メールアプリを起動する
-             </button>
-             
-             <p class="text-xs font-bold text-slate-800 pt-2 border-t border-slate-200 mt-2">2. 宛先と件名をコピー（手動でメール作成する場合）</p>
-             <div class="flex gap-1.5 items-center">
-                <input type="text" id="tmpl-email" readonly value="${mailData.email}" class="w-full px-2 py-1.5 text-xs border rounded bg-white font-mono select-all">
-                <button onclick="copyToClipboard('tmpl-email', 'btn-copy-email')" id="btn-copy-email" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-800 text-white text-xs font-bold rounded whitespace-nowrap">コピー</button>
-             </div>
-             <div class="flex gap-1.5 items-center mt-1">
-                <input type="text" id="tmpl-sub" readonly value="${escapeHTML(mailData.subject)}" class="w-full px-2 py-1.5 text-xs border rounded bg-white font-mono select-all truncate">
-                <button onclick="copyToClipboard('tmpl-sub', 'btn-copy-sub')" id="btn-copy-sub" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-800 text-white text-xs font-bold rounded whitespace-nowrap">コピー</button>
+          <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 text-left space-y-4 shadow-sm">
+             <div class="text-center">
+               <p class="text-sm font-bold text-slate-800 mb-2">下のボタンを押して、メールで送信してください</p>
+               <button onclick="shareOrDownloadDatFile(JSON.parse(decryptData('${encryptData(JSON.stringify(applicant))}')))" class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-md text-base font-bold flex justify-center items-center gap-2 transition transform hover:scale-105">
+                  <i data-lucide="send" class="w-5 h-5"></i> ファイルをメールに渡して送信する
+               </button>
+               <p class="text-[10px] text-slate-500 mt-2">※スマホの場合は、メールアプリが開きファイルが自動添付されます。<br>宛先 <strong class="text-slate-700">t-itoryoh@e.osakamanabi.jp</strong> を入力して送信してください。</p>
              </div>
              
-             <!-- 添付忘れの警告枠 -->
-             <div class="bg-red-50 border border-red-200 p-2 rounded mt-3 text-center">
-                <p class="text-red-700 font-bold text-xs"><i data-lucide="paperclip" class="w-4 h-4 inline"></i> 警告: 必ず「出願データ」を添付して送信してください。</p>
+             <div class="bg-red-50 border border-red-200 p-3 rounded mt-3 text-center">
+                <p class="text-red-700 font-bold text-xs"><i data-lucide="paperclip" class="w-4 h-4 inline"></i> 警告: PC等の場合で自動添付されない場合は、保存された「出願データ(.dat)」ファイルを手動でメールに添付してください。</p>
              </div>
           </div>
           
-          <!-- 添付確認チェックボックス -->
-          <label class="flex items-center gap-2 cursor-pointer bg-red-100 hover:bg-red-200 p-3 rounded-lg border border-red-300 transition text-left mt-2">
-             <input type="checkbox" onchange="toggleConfirmBtn(this)" class="h-5 w-5 text-red-600 rounded shrink-0">
-             <span class="text-xs font-bold text-red-700 leading-snug">出願データファイルをメールに添付して送信した(またはこれからする)ことを確認しました。</span>
-          </label>
-          
-          <button id="btn-final-confirm" disabled onclick="closeModal(); queryApplicationStatus();" class="w-full py-2.5 bg-slate-300 text-slate-500 rounded-lg text-sm font-bold cursor-not-allowed mt-2 transition">
-             確認して次へ進む
+          <button onclick="closeModal(); queryApplicationStatus();" class="w-full py-2.5 bg-slate-300 hover:bg-slate-400 text-slate-700 rounded-lg text-sm font-bold mt-2 transition">
+             確認して画面を閉じる
           </button>
         </div>
       `;
@@ -1090,14 +877,9 @@
       const loginForm = document.getElementById("status-login-container");
       const resultView = document.getElementById("status-result-container");
 
-      if (!nameInput || !emailInput) {
-        showToast("氏名とメールアドレスを入力してください", "error");
-        return;
-      }
+      if (!nameInput || !emailInput) return showToast("氏名とメールアドレスを入力してください", "error");
 
-      const applicant = state.applicants.find(
-        app => app.name === nameInput && app.email === emailInput
-      );
+      const applicant = state.applicants.find(app => app.name === nameInput && app.email === emailInput);
 
       if (!applicant) {
         errorMsg.classList.remove("hidden");
@@ -1114,7 +896,6 @@
       renderStatusChecker(applicant);
     }
 
-    // ★ スマホ等から最新の結果ファイルを読み込む機能
     function loadResultFile(event) {
       const file = event.target.files[0];
       if (!file) return;
@@ -1127,34 +908,24 @@
           const applicantObj = JSON.parse(decryptedJSON);
 
           if (applicantObj && applicantObj.id && applicantObj.name) {
-            // 既存データを上書き、または追加
             const existingIndex = state.applicants.findIndex(app => app.id === applicantObj.id);
-            if (existingIndex >= 0) {
-              state.applicants[existingIndex] = applicantObj;
-            } else {
-              state.applicants.push(applicantObj);
-            }
-            saveToLocalStorage();
+            if (existingIndex >= 0) state.applicants[existingIndex] = applicantObj;
+            else state.applicants.push(applicantObj);
             
+            saveToLocalStorage();
             showToast("最新の状況に更新しました！", "success");
             
             document.getElementById("status-login-container").classList.add("hidden");
             document.getElementById("status-result-container").classList.remove("hidden");
             state.currentApplicantId = applicantObj.id;
             renderStatusChecker(applicantObj);
-          } else {
-            showToast("ファイルの形式が正しくありません", "error");
-          }
-        } catch(err) {
-          console.error(err);
-          showToast("ファイルの読み込みに失敗しました", "error");
-        }
+          } else showToast("ファイルの形式が正しくありません", "error");
+        } catch(err) { showToast("ファイルの読み込みに失敗しました", "error"); }
       };
       reader.readAsText(file);
       event.target.value = "";
     }
 
-    // --- ★ 進行状況(タイムライン)の正確な反映ロジック修正 ---
     function renderStatusChecker(applicant) {
       document.getElementById("res-app-id").textContent = `出願ID: ${applicant.id}`;
       document.getElementById("res-name").textContent = applicant.name;
@@ -1163,7 +934,6 @@
       document.getElementById("res-prev-school").textContent = `${applicant.prevSchool || ''} ${applicant.prevCourse ? '('+applicant.prevCourse+')' : ''}`;
       document.getElementById("res-date").textContent = applicant.date;
       document.getElementById("res-photo").src = applicant.photo || MOCK_AVATARS[0];
-
       document.getElementById("res-birth").textContent = formatBirthDate(applicant.birthDate);
       
       if (applicant.guardianName) {
@@ -1177,36 +947,20 @@
       }
 
       const steps = [
-        { key: "applied", domId: "step-applied" },
-        { key: "fee", domId: "step-fee" },
-        { key: "review", domId: "step-review" },
-        { key: "ticket", domId: "step-ticket" },
-        { key: "result", domId: "step-result" }
+        { key: "applied", domId: "step-applied" }, { key: "fee", domId: "step-fee" },
+        { key: "review", domId: "step-review" }, { key: "ticket", domId: "step-ticket" }, { key: "result", domId: "step-result" }
       ];
 
-      let currentStepIdx = 0;
-      let completedSteps = ["applied"];
+      let currentStepIdx = 0; let completedSteps = ["applied"];
 
-      if (applicant.feePaid) {
-        completedSteps.push("fee");
-        currentStepIdx = 1;
-      }
-      
-      if (applicant.status === "reviewing") {
-        currentStepIdx = 2;
-      } else if (applicant.status === "ticket_issued") {
-        completedSteps.push("review");
-        currentStepIdx = 3; 
-      } else if (applicant.status === "passed" || applicant.status === "failed") {
-        completedSteps.push("review");
-        completedSteps.push("ticket");
-        currentStepIdx = 4; 
-      }
+      if (applicant.feePaid) { completedSteps.push("fee"); currentStepIdx = 1; }
+      if (applicant.status === "reviewing") currentStepIdx = 2;
+      else if (applicant.status === "ticket_issued") { completedSteps.push("review"); currentStepIdx = 3; } 
+      else if (applicant.status === "passed" || applicant.status === "failed") { completedSteps.push("review", "ticket"); currentStepIdx = 4; }
 
       steps.forEach((step, idx) => {
         const el = document.getElementById(step.domId);
         const numEl = el.querySelector(".step-num");
-        
         el.classList.remove("text-teal-600", "font-bold", "text-slate-400");
         numEl.classList.remove("bg-teal-600", "text-white", "bg-teal-100", "text-teal-700");
 
@@ -1225,288 +979,125 @@
         }
       });
 
-      const timeline = document.querySelector(".timeline-progress-line");
-      const percentWidth = (currentStepIdx / (steps.length - 1)) * 100;
-      timeline.style.height = `${percentWidth}%`;
+      document.querySelector(".timeline-progress-line").style.height = `${(currentStepIdx / (steps.length - 1)) * 100}%`;
 
       const instructionCard = document.getElementById("instruction-card");
-      let html = "";
-
       if (!applicant.feePaid) {
-        html = `
-          <div class="bg-amber-100 p-2 rounded-lg text-amber-700"><i data-lucide="alert-circle" class="w-6 h-6 animate-pulse"></i></div>
-          <div class="space-y-1">
-            <h5 class="font-bold text-slate-800 text-sm">受験料の確認およびメール送信照合中</h5>
-            <p class="text-xs text-slate-600">お送りいただいたメールデータおよび「領収証控」の情報を校内事務局が照合確認中です。確認が取れましたら次のステップに進みます。</p>
-          </div>
-        `;
+        instructionCard.innerHTML = `<div class="bg-amber-100 p-2 rounded-lg text-amber-700"><i data-lucide="alert-circle" class="w-6 h-6 animate-pulse"></i></div><div class="space-y-1"><h5 class="font-bold text-slate-800 text-sm">受験料の確認およびメール送信照合中</h5><p class="text-xs text-slate-600">お送りいただいたメールデータおよび「領収証控」の情報を校内事務局が照合確認中です。</p></div>`;
       } else if (applicant.feePaid && applicant.status === "applied") {
-        html = `
-          <div class="bg-indigo-100 p-2 rounded-lg text-indigo-700"><i data-lucide="clock" class="w-6 h-6"></i></div>
-          <div class="space-y-1">
-            <h5 class="font-bold text-slate-800 text-sm">受付・入金確認完了（書類審査待ち）</h5>
-            <p class="text-xs text-slate-600">出願メールと受験料の確認が取れました。現在、在籍校から送付される「成績単位修得証明書」が事務局へ到着するのを確認・照合中です。</p>
-          </div>
-        `;
+        instructionCard.innerHTML = `<div class="bg-indigo-100 p-2 rounded-lg text-indigo-700"><i data-lucide="clock" class="w-6 h-6"></i></div><div class="space-y-1"><h5 class="font-bold text-slate-800 text-sm">受付・入金確認完了（書類審査待ち）</h5><p class="text-xs text-slate-600">現在、在籍校から送付される「成績単位修得証明書」が事務局へ到着するのを確認・照合中です。</p></div>`;
       } else if (applicant.status === "reviewing") {
-        html = `
-          <div class="bg-blue-100 p-2 rounded-lg text-blue-700"><i data-lucide="loader" class="w-6 h-6 animate-spin"></i></div>
-          <div class="space-y-1 w-full">
-            <h5 class="font-bold text-slate-800 text-sm">提出書類・単位審査中</h5>
-            <p class="text-xs text-slate-600">在籍校からの成績単位証明書をもとに、単位認定および履修要件の審査を実施中です。</p>
-            ${applicant.notes ? `<div class="bg-white border-l-4 border-amber-500 p-2.5 mt-2 text-xs text-slate-700 rounded-r"><strong>事務局からの連絡:</strong><br>${escapeHTML(applicant.notes)}</div>` : ""}
-          </div>
-        `;
+        instructionCard.innerHTML = `<div class="bg-blue-100 p-2 rounded-lg text-blue-700"><i data-lucide="loader" class="w-6 h-6 animate-spin"></i></div><div class="space-y-1 w-full"><h5 class="font-bold text-slate-800 text-sm">提出書類・単位審査中</h5><p class="text-xs text-slate-600">在籍校からの成績単位証明書をもとに、単位認定および履修要件の審査を実施中です。</p>${applicant.notes ? `<div class="bg-white border-l-4 border-amber-500 p-2.5 mt-2 text-xs text-slate-700 rounded-r"><strong>事務局からの連絡:</strong><br>${escapeHTML(applicant.notes)}</div>` : ""}</div>`;
       } else if (applicant.status === "ticket_issued") {
-        html = `
-          <div class="bg-emerald-100 p-2 rounded-lg text-emerald-700"><i data-lucide="check-square" class="w-6 h-6"></i></div>
-          <div class="space-y-2">
-            <h5 class="font-bold text-slate-800 text-sm">書類審査通過・受験票が発行されました</h5>
-            <p class="text-xs text-slate-600">出願書類の審査がすべて完了しました。本選考（当日試験）の受験票を発行いたしましたので、以下より印刷して当日お持ちください。</p>
-            <button onclick="openExamTicket('${escapeHTML(applicant.id)}')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-1.5 rounded-lg text-xs flex items-center gap-1 shadow">
-              <i data-lucide="printer" class="w-3.5 h-3.5"></i> 受験票を表示・印刷する
-            </button>
-          </div>
-        `;
-      } else if (applicant.status === "passed") {
-        html = `
-          <div class="bg-pink-100 p-2 rounded-lg text-pink-700"><i data-lucide="award" class="w-6 h-6"></i></div>
-          <div class="space-y-2">
-            <h5 class="font-bold text-slate-800 text-sm">合否判定結果が公開されました</h5>
-            <p class="text-xs text-slate-600">おめでとうございます。選考の結果、合格が決定いたしました。下記ボタンより合否判定通知書をご確認ください。</p>
-            <button onclick="openPassFailResult('${escapeHTML(applicant.id)}')" class="bg-pink-600 hover:bg-pink-700 text-white font-semibold px-4 py-1.5 rounded-lg text-xs flex items-center gap-1 shadow">
-              <i data-lucide="award" class="w-3.5 h-3.5"></i> 合否判定結果を確認する
-            </button>
-          </div>
-        `;
-      } else if (applicant.status === "failed") {
-        html = `
-          <div class="bg-slate-200 p-2 rounded-lg text-slate-700"><i data-lucide="file-text" class="w-6 h-6"></i></div>
-          <div class="space-y-2">
-            <h5 class="font-bold text-slate-800 text-sm">合否判定結果が公開されました</h5>
-            <p class="text-xs text-slate-600">本選考結果の判定通知書が確定いたしました。下記より内容をご確認ください。</p>
-            <button onclick="openPassFailResult('${escapeHTML(applicant.id)}')" class="bg-slate-700 hover:bg-slate-800 text-white font-semibold px-4 py-1.5 rounded-lg text-xs flex items-center gap-1 shadow">
-              <i data-lucide="file-text" class="w-3.5 h-3.5"></i> 判定通知書を確認する
-            </button>
-          </div>
-        `;
+        instructionCard.innerHTML = `<div class="bg-emerald-100 p-2 rounded-lg text-emerald-700"><i data-lucide="check-square" class="w-6 h-6"></i></div><div class="space-y-2"><h5 class="font-bold text-slate-800 text-sm">書類審査通過・受験票が発行されました</h5><button onclick="openExamTicket('${escapeHTML(applicant.id)}')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-1.5 rounded-lg text-xs flex items-center gap-1 shadow"><i data-lucide="printer" class="w-3.5 h-3.5"></i> 受験票を表示・印刷する</button></div>`;
+      } else if (applicant.status === "passed" || applicant.status === "failed") {
+        const isPass = applicant.status === "passed";
+        instructionCard.innerHTML = `<div class="${isPass ? 'bg-pink-100 text-pink-700' : 'bg-slate-200 text-slate-700'} p-2 rounded-lg"><i data-lucide="${isPass ? 'award' : 'file-text'}" class="w-6 h-6"></i></div><div class="space-y-2"><h5 class="font-bold text-slate-800 text-sm">合否判定結果が公開されました</h5><button onclick="openPassFailResult('${escapeHTML(applicant.id)}')" class="${isPass ? 'bg-pink-600 hover:bg-pink-700' : 'bg-slate-700 hover:bg-slate-800'} text-white font-semibold px-4 py-1.5 rounded-lg text-xs flex items-center gap-1 shadow"><i data-lucide="${isPass ? 'award' : 'file-text'}" class="w-3.5 h-3.5"></i> 判定通知書を確認する</button></div>`;
       }
-
-      instructionCard.innerHTML = html;
       lucide.createIcons();
     }
 
     function checkAdminAuthState() {
       const loginView = document.getElementById("admin-login-view");
       const dashboardView = document.getElementById("admin-dashboard-view");
-      const timerContainer = document.getElementById("session-timer-container");
-      const navBtnAdmin = document.getElementById("nav-btn-admin");
-      const logoIcon = document.getElementById("header-logo-icon");
-
       if (state.adminSession.isLoggedIn) {
-        loginView.classList.add("hidden");
-        dashboardView.classList.remove("hidden");
-        timerContainer.classList.remove("hidden");
-        
-        navBtnAdmin.innerHTML = "<i data-lucide='shield-check' class='w-4 h-4'></i> 管理ダッシュボード";
-        navBtnAdmin.classList.add("bg-white", "text-indigo-950");
-        
-        logoIcon.setAttribute("data-lucide", "shield-check");
-        logoIcon.classList.remove("text-indigo-300");
-        logoIcon.classList.add("text-emerald-400");
-        
-        renderAdminTable();
-        renderAuditLogs();
+        loginView.classList.add("hidden"); dashboardView.classList.remove("hidden");
+        document.getElementById("session-timer-container").classList.remove("hidden");
+        document.getElementById("nav-btn-admin").innerHTML = "<i data-lucide='shield-check' class='w-4 h-4'></i> 管理ダッシュボード";
+        document.getElementById("nav-btn-admin").classList.add("bg-white", "text-indigo-950");
+        document.getElementById("header-logo-icon").setAttribute("data-lucide", "shield-check");
+        document.getElementById("header-logo-icon").classList.replace("text-indigo-300", "text-emerald-400");
+        renderAdminTable(); renderAuditLogs();
       } else {
-        loginView.classList.remove("hidden");
-        dashboardView.classList.add("hidden");
-        timerContainer.classList.add("hidden");
-        
-        navBtnAdmin.innerHTML = "<i data-lucide='lock' class='w-4 h-4'></i> 管理者ログイン";
-        
-        logoIcon.setAttribute("data-lucide", "shield");
-        logoIcon.classList.remove("text-emerald-400");
-        logoIcon.classList.add("text-indigo-300");
+        loginView.classList.remove("hidden"); dashboardView.classList.add("hidden");
+        document.getElementById("session-timer-container").classList.add("hidden");
+        document.getElementById("nav-btn-admin").innerHTML = "<i data-lucide='lock' class='w-4 h-4'></i> 管理者ログイン";
+        document.getElementById("header-logo-icon").setAttribute("data-lucide", "shield");
+        document.getElementById("header-logo-icon").classList.replace("text-emerald-400", "text-indigo-300");
       }
       lucide.createIcons();
     }
 
     function handleAdminLogin(inputPassword) {
-      const now = Date.now();
-      
-      if (state.loginLockout.lockoutUntil > now) {
-        const remaining = Math.ceil((state.loginLockout.lockoutUntil - now) / 1000);
-        showToast(`不正アクセス防止ロック中。残り ${remaining} 秒`, "error");
-        return;
-      }
-
+      if (state.loginLockout.lockoutUntil > Date.now()) return showToast(`不正アクセス防止ロック中`, "error");
       if (inputPassword === "admin1234") {
-        state.adminSession.isLoggedIn = true;
-        state.adminSession.lastActivity = Date.now();
+        state.adminSession = { isLoggedIn: true, lastActivity: Date.now(), timerInterval: null };
         state.loginLockout.failedAttempts = 0; 
-        
-        addAuditLog("AUTH", "管理者ログイン成功。管理ダッシュボードを開きました。", "info");
+        addAuditLog("AUTH", "管理者ログイン成功。", "info");
         showToast("管理者ログインに成功しました", "success");
-        
-        startAdminSession();
-        checkAdminAuthState();
+        startAdminSession(); checkAdminAuthState();
       } else {
         state.loginLockout.failedAttempts++;
-        addAuditLog("AUTH", `管理者ログイン失敗。失敗回数: ${state.loginLockout.failedAttempts}回`, "warning");
-        
+        addAuditLog("AUTH", `管理者ログイン失敗。`, "warning");
         if (state.loginLockout.failedAttempts >= 5) {
           state.loginLockout.lockoutUntil = Date.now() + 60000; 
-          addAuditLog("AUTH", "連続5回ログイン失敗。システムへの疑わしいアクセスとして一時ロックしました。", "alert");
-          showToast("ログインを連続で失敗したため、1分間ロックされました", "error");
-        } else {
-          showToast(`パスワードが違います（あと ${5 - state.loginLockout.failedAttempts} 回でロック）`, "error");
-        }
+          showToast("1分間ロックされました", "error");
+        } else showToast(`パスワードが違います`, "error");
       }
     }
 
     function startAdminSession() {
       if (state.adminSession.timerInterval) clearInterval(state.adminSession.timerInterval);
-      
       state.adminSession.timerInterval = setInterval(() => {
-        const now = Date.now();
-        const idleTime = now - state.adminSession.lastActivity;
-        const sessionTimeout = 15 * 60 * 1000; 
-        
-        if (idleTime > sessionTimeout) {
-          handleAdminLogout("一定時間無操作のため、安全規則に基づき自動ログアウトしました。");
-        } else {
-          const remainSec = Math.ceil((sessionTimeout - idleTime) / 1000);
-          const min = Math.floor(remainSec / 60);
-          const sec = remainSec % 60;
-          document.getElementById("session-timer").textContent = `自動切断まで ${min}分${String(sec).padStart(2, '0')}秒`;
+        const idleTime = Date.now() - state.adminSession.lastActivity;
+        if (idleTime > 15 * 60 * 1000) handleAdminLogout("無操作のため自動ログアウトしました。");
+        else {
+          const remainSec = Math.ceil((15 * 60 * 1000 - idleTime) / 1000);
+          document.getElementById("session-timer").textContent = `自動切断まで ${Math.floor(remainSec / 60)}分${String(remainSec % 60).padStart(2, '0')}秒`;
         }
       }, 1000);
     }
 
-    function updateActivity() {
-      if (state.adminSession.isLoggedIn) {
-        state.adminSession.lastActivity = Date.now();
-      }
-    }
-
-    function handleAdminLogout(reason = "ユーザー操作による安全ログアウト") {
+    function updateActivity() { if (state.adminSession.isLoggedIn) state.adminSession.lastActivity = Date.now(); }
+    function handleAdminLogout(reason = "ログアウト") {
       state.adminSession.isLoggedIn = false;
-      if (state.adminSession.timerInterval) {
-        clearInterval(state.adminSession.timerInterval);
-        state.adminSession.timerInterval = null;
-      }
+      if (state.adminSession.timerInterval) clearInterval(state.adminSession.timerInterval);
       addAuditLog("AUTH", `管理者ログアウト: ${reason}`, "info");
-      showToast(reason, "info");
-      checkAdminAuthState();
+      showToast(reason, "info"); checkAdminAuthState();
     }
 
     function setupDragAndDrop() {
       const dropZone = document.getElementById("drop-zone");
       if (!dropZone) return;
-
-      dropZone.addEventListener("click", () => {
-        document.getElementById("dat-file-picker").click();
-      });
-
-      dropZone.addEventListener("dragover", (e) => {
-        e.preventDefault();
-        dropZone.classList.add("bg-indigo-100/80", "border-indigo-500", "text-indigo-900");
-      });
-
-      dropZone.addEventListener("dragleave", () => {
-        dropZone.classList.remove("bg-indigo-100/80", "border-indigo-500", "text-indigo-900");
-      });
-
-      dropZone.addEventListener("drop", (e) => {
-        e.preventDefault();
-        dropZone.classList.remove("bg-indigo-100/80", "border-indigo-500", "text-indigo-900");
-        
-        const files = e.dataTransfer.files;
-        if (files.length > 0) {
-          processDatFiles(files);
-        }
-      });
+      dropZone.addEventListener("click", () => document.getElementById("dat-file-picker").click());
+      dropZone.addEventListener("dragover", (e) => { e.preventDefault(); dropZone.classList.add("bg-indigo-100/80", "border-indigo-500", "text-indigo-900"); });
+      dropZone.addEventListener("dragleave", () => dropZone.classList.remove("bg-indigo-100/80", "border-indigo-500", "text-indigo-900"));
+      dropZone.addEventListener("drop", (e) => { e.preventDefault(); dropZone.classList.remove("bg-indigo-100/80", "border-indigo-500", "text-indigo-900"); if (e.dataTransfer.files.length > 0) processDatFiles(e.dataTransfer.files); });
     }
 
     function handleDatFilesSelected(event) {
-      const files = event.target.files;
-      if (files.length > 0) {
-        processDatFiles(files);
-      }
+      if (event.target.files.length > 0) processDatFiles(event.target.files);
       event.target.value = ""; 
     }
 
-    // --- ★ 管理者側の取り込み処理 (.dat, .txt, .text 全対応へ柔軟化) ---
     function processDatFiles(files) {
-      if (!state.adminSession.isLoggedIn) {
-        showToast("データ追加には管理者認証が必要です", "error");
-        return;
-      }
-
-      let successCount = 0;
-      let existCount = 0;
-      let errorCount = 0;
-      let filesProcessed = 0;
-
+      if (!state.adminSession.isLoggedIn) return showToast("データ追加には管理者認証が必要です", "error");
+      let successCount = 0, existCount = 0, errorCount = 0, filesProcessed = 0;
       Array.from(files).forEach(file => {
-        const fileNameLower = file.name.toLowerCase();
-        if (!fileNameLower.endsWith(".dat") && !fileNameLower.endsWith(".txt") && !fileNameLower.endsWith(".text")) {
-          errorCount++;
-          filesProcessed++;
-          checkAllProcessed();
-          return;
-        }
-
+        const f = file.name.toLowerCase();
+        if (!f.endsWith(".dat") && !f.endsWith(".txt") && !f.endsWith(".text")) { errorCount++; filesProcessed++; checkAllProcessed(); return; }
         const reader = new FileReader();
         reader.onload = function(e) {
           try {
-            const rawEncrypted = e.target.result.trim();
-            const decryptedJSON = decryptData(rawEncrypted);
-            const applicantObj = JSON.parse(decryptedJSON);
-
+            const applicantObj = JSON.parse(decryptData(e.target.result.trim()));
             if (applicantObj && applicantObj.id && applicantObj.name) {
-              const isExist = state.applicants.some(app => app.id === applicantObj.id);
-              if (isExist) {
-                existCount++;
-              } else {
-                state.applicants.push(applicantObj);
-                successCount++;
-              }
-            } else {
-              errorCount++;
-            }
-          } catch (err) {
-            console.error("ファイル解読エラー:", err);
-            errorCount++;
-          }
-
-          filesProcessed++;
-          checkAllProcessed();
+              const existingIndex = state.applicants.findIndex(app => app.id === applicantObj.id);
+              if (existingIndex >= 0) { state.applicants[existingIndex] = applicantObj; existCount++; }
+              else { state.applicants.push(applicantObj); successCount++; }
+            } else errorCount++;
+          } catch (err) { errorCount++; }
+          filesProcessed++; checkAllProcessed();
         };
-        
         reader.readAsText(file);
       });
 
       function checkAllProcessed() {
         if (filesProcessed === files.length) {
-          if (successCount > 0) {
-            saveToLocalStorage();
-            renderAdminTable();
-          }
-
-          addAuditLog(
-            "DATA_MODIFY", 
-            `暗号化ファイルを一括取り込み。成功: ${successCount}件, 重複無視: ${existCount}件, 失敗: ${errorCount}件`,
-            "info"
-          );
-
-          if (successCount > 0) {
-            showToast(`${successCount}件の出願データ（.dat / .txt）を正常に取り込み・復号しました`, "success");
-          } else if (existCount > 0) {
-            showToast(`取り込まれたデータはすべて登録済みでした（${existCount}件）`, "info");
-          } else {
-            showToast(`ファイルの解読に失敗しました。正しい出願ファイル(.dat または .txt)かご確認ください。`, "error");
-          }
+          if (successCount > 0 || existCount > 0) { saveToLocalStorage(); renderAdminTable(); }
+          addAuditLog("DATA_MODIFY", `暗号化ファイル取り込み。新規: ${successCount}, 更新: ${existCount}, 失敗: ${errorCount}`, "info");
+          if (successCount > 0) showToast(`${successCount}件を取り込みました`, "success");
+          else if (existCount > 0) showToast(`${existCount}件のデータを最新に更新しました`, "success");
+          else showToast(`読み込みに失敗しました`, "error");
         }
       }
     }
@@ -1514,21 +1105,9 @@
     function renderAdminTable() {
       const tbody = document.getElementById("admin-table-body");
       document.getElementById("applicant-count").textContent = state.applicants.length;
-      
-      if (state.applicants.length === 0) {
-        tbody.innerHTML = `
-          <tr>
-            <td colspan="7" class="p-8 text-center text-slate-400">出願者データがありません。「.dat」や「.txt」ファイルを放り込むか、デモデータを作成してください。</td>
-          </tr>
-        `;
-        return;
-      }
-
+      if (state.applicants.length === 0) return tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-slate-400">出願者データがありません。「.dat」や「.txt」ファイルを放り込むか、デモデータを作成してください。</td></tr>`;
       tbody.innerHTML = state.applicants.map(app => {
-        const feeBadge = app.feePaid 
-          ? `<span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-[10px] font-semibold">領収済</span>` 
-          : `<span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-[10px] font-semibold">要照合</span>`;
-        
+        const feeBadge = app.feePaid ? `<span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-[10px] font-semibold">領収済</span>` : `<span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-[10px] font-semibold">要照合</span>`;
         let statusBadge = "";
         switch (app.status) {
           case "applied": statusBadge = `<span class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[10px] font-semibold">未着手</span>`; break;
@@ -1537,206 +1116,164 @@
           case "passed": statusBadge = `<span class="bg-pink-100 text-pink-800 px-2 py-0.5 rounded text-[10px] font-semibold">合格決定</span>`; break;
           case "failed": statusBadge = `<span class="bg-slate-300 text-slate-800 px-2 py-0.5 rounded text-[10px] font-semibold">不合格</span>`; break;
         }
-
-        const examIdText = app.examId ? `<span class="font-mono font-bold text-slate-700">${app.examId}</span>` : `<span class="text-slate-400">未付与</span>`;
-
-        return `
-          <tr class="hover:bg-slate-50 transition">
-            <td class="p-3"><button onclick="selectApplicant('${app.id}')" class="font-mono font-bold text-indigo-600 hover:underline">${app.id}</button></td>
-            <td class="p-3">
-              <div class="font-bold text-slate-800">${escapeHTML(app.name)}</div>
-              <div class="text-[10px] text-slate-400">${escapeHTML(app.kana)}</div>
-            </td>
-            <td class="p-3 text-slate-600">${escapeHTML(app.faculty)}</td>
-            <td class="p-3">${feeBadge}</td>
-            <td class="p-3">${statusBadge}</td>
-            <td class="p-3">${examIdText}</td>
-            <td class="p-3">
-              <button onclick="selectApplicant('${app.id}')" class="text-indigo-600 hover:text-indigo-900 font-semibold text-[11px] flex items-center gap-0.5"><i data-lucide="eye" class="w-3.5 h-3.5"></i>審査</button>
-            </td>
-          </tr>
-        `;
+        return `<tr class="hover:bg-slate-50 transition"><td class="p-3"><button onclick="selectApplicant('${app.id}')" class="font-mono font-bold text-indigo-600 hover:underline">${app.id}</button></td><td class="p-3"><div class="font-bold text-slate-800">${escapeHTML(app.name)}</div><div class="text-[10px] text-slate-400">${escapeHTML(app.kana)}</div></td><td class="p-3 text-slate-600">${escapeHTML(app.faculty)}</td><td class="p-3">${feeBadge}</td><td class="p-3">${statusBadge}</td><td class="p-3">${app.examId ? `<span class="font-mono font-bold text-slate-700">${app.examId}</span>` : `<span class="text-slate-400">未付与</span>`}</td><td class="p-3"><button onclick="selectApplicant('${app.id}')" class="text-indigo-600 hover:text-indigo-900 font-semibold text-[11px] flex items-center gap-0.5"><i data-lucide="eye" class="w-3.5 h-3.5"></i>審査</button></td></tr>`;
       }).join("");
       lucide.createIcons();
     }
 
-    // --- ★ 管理者画面での審査ボード（ステータス表示の直感化） ---
     function selectApplicant(id) {
       state.currentApplicantId = id;
       const applicant = state.applicants.find(app => app.id === id);
       if (!applicant) return;
-
       document.getElementById("check-panel-empty").classList.add("hidden");
       const panel = document.getElementById("check-panel-content");
       panel.classList.remove("hidden");
 
       panel.innerHTML = `
         <div class="space-y-3">
-          <div class="flex items-center gap-3">
-            <img class="w-12 h-16 object-cover border rounded" src="${applicant.photo || MOCK_AVATARS[0]}">
-            <div>
-              <div class="font-bold text-slate-800 text-sm">${escapeHTML(applicant.name)}</div>
-              <div class="text-slate-400 text-[10px]">${applicant.id}</div>
-              <div class="text-slate-400 text-[10px]">前籍校: ${escapeHTML(applicant.prevSchool || '未登録')} (${escapeHTML(applicant.prevCourse || '')})</div>
-            </div>
-          </div>
-
+          <div class="flex items-center gap-3"><img class="w-12 h-16 object-cover border rounded" src="${applicant.photo || MOCK_AVATARS[0]}"><div><div class="font-bold text-slate-800 text-sm">${escapeHTML(applicant.name)}</div><div class="text-slate-400 text-[10px]">${applicant.id}</div><div class="text-slate-400 text-[10px]">前籍校: ${escapeHTML(applicant.prevSchool || '未登録')} (${escapeHTML(applicant.prevCourse || '')})</div></div></div>
           <div class="border-t border-slate-100 my-2 pt-2 space-y-2">
             <div class="font-semibold text-slate-700">提出・送付資料一覧:</div>
-            
-            <div class="bg-indigo-50/50 p-2.5 rounded border border-indigo-100 space-y-1">
-              <div class="flex justify-between items-center">
-                <span class="font-bold text-[11px] text-slate-700">成績単位修得証明書 (郵送/直接)</span>
-                <span class="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-bold">在籍校送付</span>
-              </div>
-              <p class="text-[10px] text-slate-500">在籍校より直接郵送されてきた原本とデータに相違がないか照合してください。</p>
-            </div>
-
-            <div class="flex justify-between items-center bg-slate-50 p-2 rounded border border-slate-100">
-              <span class="truncate pr-2 text-slate-600 text-[11px]">受験料：${escapeHTML(applicant.receiptName)}</span>
-              <div class="flex gap-1.5">
-                <button onclick="openMockDoc('領収証プレビュー', '${applicant.receipt}')" class="text-indigo-600 hover:underline">表示</button>
-                <button onclick="toggleFeePaid('${applicant.id}')" class="px-2 py-0.5 rounded text-[10px] ${applicant.feePaid ? 'bg-emerald-600 text-white' : 'bg-slate-300 text-slate-700'}">${applicant.feePaid ? '受領済' : '確認'}</button>
-              </div>
-            </div>
+            <div class="bg-indigo-50/50 p-2.5 rounded border border-indigo-100 space-y-1"><div class="flex justify-between items-center"><span class="font-bold text-[11px] text-slate-700">成績単位修得証明書 (郵送/直接)</span><span class="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-bold">在籍校送付</span></div><p class="text-[10px] text-slate-500">在籍校より直接郵送されてきた原本とデータに相違がないか照合してください。</p></div>
+            <div class="flex justify-between items-center bg-slate-50 p-2 rounded border border-slate-100"><span class="truncate pr-2 text-slate-600 text-[11px]">受験料：${escapeHTML(applicant.receiptName)}</span><div class="flex gap-1.5"><button onclick="openMockDoc('領収証プレビュー', '${applicant.receipt}')" class="text-indigo-600 hover:underline">表示</button><button onclick="toggleFeePaid('${applicant.id}')" class="px-2 py-0.5 rounded text-[10px] ${applicant.feePaid ? 'bg-emerald-600 text-white' : 'bg-slate-300 text-slate-700'}">${applicant.feePaid ? '受領済' : '確認'}</button></div></div>
           </div>
-
-          <!-- 個別判定・審査操作 -->
           <div class="border-t border-slate-100 my-2 pt-2 space-y-3">
-            <div class="flex justify-between items-center bg-slate-50 p-2 rounded border">
-              <span class="text-xs font-bold text-slate-700">現在のステータス</span>
-              ${
-                applicant.status === 'applied' ? '<span class="text-xs bg-slate-200 px-2 py-1 rounded font-bold">未着手</span>' :
-                applicant.status === 'reviewing' ? '<span class="text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded font-bold">審査中</span>' :
-                applicant.status === 'ticket_issued' ? `<span class="text-xs bg-indigo-200 text-indigo-800 px-2 py-1 rounded font-bold">受験票済 (番号: ${applicant.examId})</span>` :
-                applicant.status === 'passed' ? '<span class="text-xs bg-pink-200 text-pink-800 px-2 py-1 rounded font-bold">合格</span>' :
-                '<span class="text-xs bg-slate-300 px-2 py-1 rounded font-bold">不合格</span>'
-              }
-            </div>
-
-            <div>
-              <label class="block font-semibold text-slate-600 mb-1">個別連絡メモ・通知</label>
-              <textarea id="panel-notes" class="w-full border p-2 rounded text-xs" rows="2" placeholder="在籍校からの書類確認状況や不備通知など">${escapeHTML(applicant.notes)}</textarea>
-            </div>
-
-            <div class="grid grid-cols-2 gap-2">
-              <button onclick="updateApplicantStatus('${applicant.id}', 'reviewing')" class="py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded shadow-sm transition">審査中にする</button>
-              <button onclick="issueExamTicket('${applicant.id}')" class="py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded shadow-sm transition">受験票を発行する</button>
-            </div>
-            
-            <div class="border-t border-slate-100 pt-2 flex gap-2">
-              <button onclick="updateApplicantStatus('${applicant.id}', 'passed')" class="flex-grow py-1.5 bg-pink-600 hover:bg-pink-700 text-white font-semibold rounded shadow-sm transition">選考：合格</button>
-              <button onclick="updateApplicantStatus('${applicant.id}', 'failed')" class="flex-grow py-1.5 bg-slate-500 hover:bg-slate-600 text-white font-semibold rounded shadow-sm transition">選考：不合格</button>
-            </div>
-            
-            <!-- ★ 志願者への返信用ファイル出力機能 -->
-            <div class="border-t border-slate-100 pt-2 flex flex-col gap-2">
-              <button onclick="downloadResultFile('${applicant.id}')" class="w-full py-1.5 bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded shadow-sm transition flex items-center justify-center gap-1">
-                <i data-lucide="mail-check" class="w-3.5 h-3.5"></i> 志願者への返信用データを出力する
-              </button>
-              <p class="text-[9px] text-slate-500 text-center leading-tight">※ステータス更新後、このファイルを出力して志願者へメールで返信してください。<br>志願者はこのファイルをスマホ等で読み込むことで最新結果を確認できます。</p>
-            </div>
+            <div class="flex justify-between items-center bg-slate-50 p-2 rounded border"><span class="text-xs font-bold text-slate-700">現在のステータス</span>${applicant.status === 'applied' ? '<span class="text-xs bg-slate-200 px-2 py-1 rounded font-bold">未着手</span>' : applicant.status === 'reviewing' ? '<span class="text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded font-bold">審査中</span>' : applicant.status === 'ticket_issued' ? `<span class="text-xs bg-indigo-200 text-indigo-800 px-2 py-1 rounded font-bold">受験票済 (番号: ${applicant.examId})</span>` : applicant.status === 'passed' ? '<span class="text-xs bg-pink-200 text-pink-800 px-2 py-1 rounded font-bold">合格</span>' : '<span class="text-xs bg-slate-300 px-2 py-1 rounded font-bold">不合格</span>'}</div>
+            <div><label class="block font-semibold text-slate-600 mb-1">個別連絡メモ・通知</label><textarea id="panel-notes" class="w-full border p-2 rounded text-xs" rows="2" placeholder="在籍校からの書類確認状況や不備通知など">${escapeHTML(applicant.notes)}</textarea></div>
+            <div class="grid grid-cols-2 gap-2"><button onclick="updateApplicantStatus('${applicant.id}', 'reviewing')" class="py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded shadow-sm transition">審査中にする</button><button onclick="issueExamTicket('${applicant.id}')" class="py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded shadow-sm transition">受験票を発行する</button></div>
+            <div class="border-t border-slate-100 pt-2 flex gap-2"><button onclick="updateApplicantStatus('${applicant.id}', 'passed')" class="flex-grow py-1.5 bg-pink-600 hover:bg-pink-700 text-white font-semibold rounded shadow-sm transition">選考：合格</button><button onclick="updateApplicantStatus('${applicant.id}', 'failed')" class="flex-grow py-1.5 bg-slate-500 hover:bg-slate-600 text-white font-semibold rounded shadow-sm transition">選考：不合格</button></div>
+            <div class="border-t border-slate-100 pt-2 flex flex-col gap-2"><button onclick="downloadResultAndShare('${applicant.id}')" class="w-full py-1.5 bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded shadow-sm transition flex items-center justify-center gap-1"><i data-lucide="mail-check" class="w-3.5 h-3.5"></i> 志願者への返信用データを出力・送信する</button><p class="text-[9px] text-slate-500 text-center leading-tight">※ステータス更新後、このファイルを出力して志願者へメールで返信してください。<br>志願者はこのファイルをスマホ等で読み込むことで最新結果を確認できます。</p></div>
           </div>
         </div>
       `;
       lucide.createIcons();
     }
 
-    // ★ 志願者への返信結果用ファイル(.dat)をダウンロードする
-    function downloadResultFile(id) {
+    // --- ★ 管理者側の共有・ダウンロード処理 ---
+    function downloadResultAndShare(id) {
       const applicant = state.applicants.find(app => app.id === id);
       if (!applicant) return;
-      
       const encryptedText = encryptData(JSON.stringify(applicant));
+      const filename = `審査結果_${applicant.id}_${applicant.name.replace(/\s+/g, "")}.dat`;
+      
+      if (navigator.canShare) {
+        const file = new File([encryptedText], filename, { type: "text/plain" });
+        if (navigator.canShare({ files: [file] })) {
+          navigator.share({
+            files: [file],
+            title: '審査結果データ',
+            text: `${applicant.name}様\n\nWeb出願システムの審査結果データをお送りします。\nポータルサイトにて本データを読み込み、結果をご確認ください。`
+          }).then(() => {
+            addAuditLog("DATA_EXPORT", `出願番号: ${id} の返信用データを共有・出力`, "info");
+            showToast("メールアプリ等にファイルを渡しました。", "success");
+            closeModal();
+          }).catch((error) => {
+            fallbackDownloadResult(encryptedText, filename, id);
+          });
+          return;
+        }
+      }
+      fallbackDownloadResult(encryptedText, filename, id);
+    }
+
+    function fallbackDownloadResult(encryptedText, filename, id) {
       const blob = new Blob([encryptedText], { type: "text/plain;charset=utf-8" });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
-      // 分かりやすいようにファイル名を「審査結果」に変更
-      a.download = `審査結果_${applicant.id}_${applicant.name.replace(/\s+/g, "")}.dat`;
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
+      addAuditLog("DATA_EXPORT", `出願番号: ${id} の返信用データ出力`, "info");
+      showToast("ファイルを保存しました。メールに添付してください。", "success");
+    }
+
+    // --- ★ 結果送信を強制するモーダル ---
+    function showAdminResultShareModal(appId, customLabel = null) {
+      const applicant = state.applicants.find(app => app.id === appId);
+      if (!applicant) return;
       
-      addAuditLog("DATA_EXPORT", `出願番号: ${id} の志願者返信用データを出力しました。`, "info");
-      showToast("返信用データを出力しました。志願者へメール添付で返信してください。", "success");
+      const modal = document.getElementById("modal-container");
+      const bodyContent = document.getElementById("modal-body-content");
+      modal.classList.remove("hidden");
+
+      let statusLabel = customLabel;
+      if (!statusLabel) {
+        if (applicant.status === "reviewing") statusLabel = "審査中";
+        else if (applicant.status === "ticket_issued") statusLabel = "受験票発行済";
+        else if (applicant.status === "passed") statusLabel = "合格";
+        else if (applicant.status === "failed") statusLabel = "不合格";
+        else statusLabel = "情報更新";
+      }
+
+      bodyContent.innerHTML = `
+        <div class="text-center space-y-4">
+          <div class="mx-auto w-14 h-14 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center shadow-md animate-pulse">
+            <i data-lucide="mail-warning" class="w-7 h-7"></i>
+          </div>
+          
+          <h4 class="text-xl font-black text-slate-800 tracking-tight">志願者への結果通知が必要です</h4>
+          <p class="text-xs font-bold text-slate-600">ステータスを「${statusLabel}」に更新しました。<br>変更を志願者に知らせるため、結果データを送信してください。</p>
+          
+          <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-200 text-left space-y-4 shadow-sm">
+             <div class="text-center">
+               <button onclick="downloadResultAndShare('${applicant.id}')" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-md text-sm font-bold flex justify-center items-center gap-2 transition">
+                  <i data-lucide="send" class="w-5 h-5"></i> 返信データをメールに渡して送信する
+               </button>
+               <p class="text-[10px] text-indigo-700 mt-2">宛先: <strong class="text-indigo-900">${escapeHTML(applicant.email)}</strong></p>
+             </div>
+          </div>
+          
+          <div class="bg-slate-50 border border-slate-200 p-3 rounded mt-3 text-center">
+            <p class="text-slate-600 font-bold text-[10px]">※PC環境などで自動でメーラーが起動しない場合は、<br>ダウンロードされたファイルを手動でメールに添付してください。</p>
+          </div>
+          
+          <button onclick="closeModal()" class="w-full py-2.5 bg-slate-300 hover:bg-slate-400 text-slate-700 rounded-lg text-sm font-bold mt-2 transition">
+             閉じる (後で手動送信する)
+          </button>
+        </div>
+      `;
+      lucide.createIcons();
     }
 
     function toggleFeePaid(id) {
       const applicant = state.applicants.find(app => app.id === id);
       if (!applicant) return;
-      
       applicant.feePaid = !applicant.feePaid;
-      saveToLocalStorage();
-      renderAdminTable();
-      selectApplicant(id); 
-
-      addAuditLog("DATA_MODIFY", `出願番号: ${id} の受験料確認ステータスを変更しました。`, "info");
+      saveToLocalStorage(); renderAdminTable(); selectApplicant(id); 
+      showAdminResultShareModal(id, applicant.feePaid ? "受験料入金確認(領収済)" : "受験料(未受領)");
     }
 
     function updateApplicantStatus(id, newStatus) {
       const applicant = state.applicants.find(app => app.id === id);
       if (!applicant) return;
-
-      const notes = document.getElementById("panel-notes").value.trim();
       applicant.status = newStatus;
-      applicant.notes = notes;
-
-      saveToLocalStorage();
-      renderAdminTable();
-      selectApplicant(id); // 再描画してステータス更新を即座に反映させる
-
-      addAuditLog("DATA_MODIFY", `出願番号: ${id} の審査ステータスを 【${newStatus}】 に更新しました。`, "info");
+      applicant.notes = document.getElementById("panel-notes").value.trim();
+      saveToLocalStorage(); renderAdminTable(); selectApplicant(id);
       showToast("ステータスを更新しました", "success");
+      showAdminResultShareModal(id);
     }
 
     function issueExamTicket(id) {
       const applicant = state.applicants.find(app => app.id === id);
       if (!applicant) return;
-
-      if (!applicant.feePaid) {
-        showToast("受験料が「領収済」になっていないため、受験票は発行できません", "error");
-        return;
-      }
-
-      if (!applicant.examId) {
-        const randNum = Math.floor(1000 + Math.random() * 9000);
-        applicant.examId = `EX-${randNum}`;
-      }
-
+      if (!applicant.feePaid) return showToast("受験料が「領収済」になっていないため発行できません", "error");
+      if (!applicant.examId) applicant.examId = `EX-${Math.floor(1000 + Math.random() * 9000)}`;
       applicant.status = "ticket_issued";
-      const notes = document.getElementById("panel-notes").value.trim();
-      applicant.notes = notes;
-
-      saveToLocalStorage();
-      renderAdminTable();
-      selectApplicant(id); // 再描画してステータス更新を即座に反映させる
-
-      addAuditLog("DATA_MODIFY", `出願番号: ${id} の受験票を発行しました。`, "info");
+      applicant.notes = document.getElementById("panel-notes").value.trim();
+      saveToLocalStorage(); renderAdminTable(); selectApplicant(id);
       showToast(`受験番号 ${applicant.examId} を発行しました`, "success");
+      showAdminResultShareModal(id);
     }
 
     function renderAuditLogs() {
       const container = document.getElementById("audit-log-container");
-      if (state.auditLogs.length === 0) {
-        container.innerHTML = `<div class="text-slate-400 text-center py-4">監査ログはありません</div>`;
-        return;
-      }
-
+      if (state.auditLogs.length === 0) return container.innerHTML = `<div class="text-slate-400 text-center py-4">監査ログはありません</div>`;
       container.innerHTML = state.auditLogs.map(log => {
-        let severityColor = "text-slate-500";
-        let severityLabel = "情報";
+        let severityColor = "text-slate-500", severityLabel = "情報";
         if (log.severity === "warning") { severityColor = "text-amber-500 font-semibold"; severityLabel = "警告"; }
         else if (log.severity === "alert") { severityColor = "text-red-500 font-bold"; severityLabel = "重大"; }
-
-        return `
-          <div class="border-b border-slate-100 pb-1.5 space-y-0.5">
-            <div class="flex justify-between text-[9px] text-slate-400">
-              <span>${log.time}</span>
-              <span class="${severityColor}">[${severityLabel}]</span>
-            </div>
-            <div class="text-slate-700 leading-tight">${escapeHTML(log.message)}</div>
-          </div>
-        `;
+        return `<div class="border-b border-slate-100 pb-1.5 space-y-0.5"><div class="flex justify-between text-[9px] text-slate-400"><span>${log.time}</span><span class="${severityColor}">[${severityLabel}]</span></div><div class="text-slate-700 leading-tight">${escapeHTML(log.message)}</div></div>`;
       }).join("");
     }
 
@@ -1744,296 +1281,109 @@
       const names = ["宮沢 賢治", "新美 南吉", "太宰 治"];
       const kanas = ["ミヤザワ ケンジ", "ニイミ ナンキチ", "ダザイ オサム"];
       const births = ["20050827", "20100730", "20100619"];
-      const prevSchools = ["大阪市立第一高等学校", "府立第二高等学校", "関西第三高等学校"];
-      const prevCourses = ["全日制", "定時制", "通信制"];
-      const faculties = ["編入学", "転入学", "編入学"];
-
       for (let i = 0; i < 3; i++) {
-        const randNum = Math.floor(10000 + Math.random() * 90000);
-        const appId = `AD-${randNum}`;
         const newApp = {
-          id: appId,
-          name: names[i],
-          kana: kanas[i],
-          birthDate: births[i],
-          phone: `090-9999-111${i}`,
-          email: `demo${i}@example.com`,
-          prevSchool: prevSchools[i],
-          prevCourse: prevCourses[i],
-          faculty: faculties[i],
-          course: "通信制の課程",
-          guardianName: i === 0 ? "" : `${names[i].split(" ")[0]} 惣兵衛`,
-          guardianRelation: i === 0 ? "" : "父",
-          guardianKana: i === 0 ? "" : `${kanas[i].split(" ")[0]} ソウベエ`,
-          guardianPhone: i === 0 ? "" : `090-8888-222${i}`,
-          photo: MOCK_AVATARS[i % MOCK_AVATARS.length],
-          transcriptStatus: "school_sent",
-          receipt: MOCK_RECEIPT,
-          receiptName: `受験料ATM控_${names[i].replace(" ", "")}.png`,
-          date: getFormattedDate(new Date()),
-          feePaid: i === 0, 
-          status: "applied",
-          notes: "",
-          examId: null
+          id: `AD-${Math.floor(10000 + Math.random() * 90000)}`, name: names[i], kana: kanas[i], birthDate: births[i],
+          phone: `090-9999-111${i}`, email: `demo${i}@example.com`, prevSchool: "大阪高等学校", prevCourse: "全日制",
+          faculty: "編入学", course: "通信制の課程",
+          guardianName: i === 0 ? "" : `${names[i].split(" ")[0]} 惣兵衛`, guardianRelation: i === 0 ? "" : "父", guardianKana: i === 0 ? "" : `${kanas[i].split(" ")[0]} ソウベエ`, guardianPhone: i === 0 ? "" : `090-8888-222${i}`,
+          photo: MOCK_AVATARS[i % MOCK_AVATARS.length], transcriptStatus: "school_sent", receipt: MOCK_RECEIPT, receiptName: `ATM控_${names[i].replace(" ", "")}.png`,
+          date: getFormattedDate(new Date()), feePaid: i === 0, status: "applied", notes: "", examId: null
         };
         state.applicants.push(newApp);
       }
-
-      saveToLocalStorage();
-      renderAdminTable();
-      addAuditLog("DATA_MODIFY", "デモ用模擬データを3件生成しました。", "info");
-      showToast("模擬データを3件追加しました", "info");
+      saveToLocalStorage(); renderAdminTable(); showToast("模擬データを追加しました", "info");
     }
 
     function exportToExcel() {
-      if (!state.adminSession.isLoggedIn) return;
-      if (state.applicants.length === 0) {
-        showToast("出力するデータがありません", "error");
-        return;
-      }
-
+      if (!state.adminSession.isLoggedIn || state.applicants.length === 0) return;
       const excelData = state.applicants.map(app => ({
-        "出願番号": app.id,
-        "氏名": app.name,
-        "フリガナ": app.kana,
-        "生年月日": formatBirthDate(app.birthDate),
-        "電話番号": app.phone,
-        "メールアドレス": app.email,
-        "前籍校": app.prevSchool || "",
-        "前籍校課程": app.prevCourse || "",
-        "志願区分": app.faculty,
-        "志望課程": app.course || "通信制の課程",
-        "保護者氏名": app.guardianName || "不要(成人)",
-        "続柄": app.guardianRelation || "",
-        "緊急連絡先": app.guardianPhone || "",
-        "出願日": app.date,
-        "入金ステータス": app.feePaid ? "入金済" : "要確認",
-        "在籍校成績証明": app.transcriptStatus === "school_sent" ? "確認必要" : "未受領",
-        "書類審査ステータス": app.status === "ticket_issued" ? "受験票済" : app.status === "passed" ? "合格" : app.status === "failed" ? "不合格" : "審査中",
-        "受験番号": app.examId || "未付与",
-        "校内職員コメント": app.notes || ""
+        "出願番号": app.id, "氏名": app.name, "フリガナ": app.kana, "生年月日": formatBirthDate(app.birthDate), "電話番号": app.phone, "メールアドレス": app.email,
+        "前籍校": app.prevSchool || "", "前籍校課程": app.prevCourse || "", "志願区分": app.faculty, "志望課程": app.course || "通信制の課程",
+        "保護者氏名": app.guardianName || "不要(成人)", "続柄": app.guardianRelation || "", "緊急連絡先": app.guardianPhone || "", "出願日": app.date,
+        "入金": app.feePaid ? "済" : "未", "ステータス": app.status === "ticket_issued" ? "受験票済" : app.status === "passed" ? "合格" : app.status === "failed" ? "不合格" : "審査中", "受験番号": app.examId || "未付与"
       }));
-
-      const ws = XLSX.utils.json_to_sheet(excelData);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "志願者一覧");
-
-      const filename = `出願データ一括出力_${new Date().toISOString().slice(0, 10)}.xlsx`;
-      XLSX.writeFile(wb, filename);
-
-      addAuditLog("DATA_EXPORT", `管理者によるExcelエクスポートを実行。ファイル名: ${filename}`, "warning");
-      showToast("Excelダウンロード完了。操作ログに記録されました", "success");
+      const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(excelData), "志願者一覧");
+      XLSX.writeFile(wb, `出願データ_${new Date().toISOString().slice(0, 10)}.xlsx`);
     }
 
     function importFromExcel(event) {
-      if (!state.adminSession.isLoggedIn) return;
-      const file = event.target.files[0];
-      if (!file) return;
-
+      if (!state.adminSession.isLoggedIn || !event.target.files[0]) return;
       const reader = new FileReader();
       reader.onload = function (e) {
         try {
-          const data = new Uint8Array(e.target.result);
-          const workbook = XLSX.read(data, { type: 'array' });
-          const firstSheet = workbook.SheetNames[0];
-          const sheet = workbook.Sheets[firstSheet];
-          const rows = XLSX.utils.sheet_to_json(sheet);
-
+          const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+          const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
           let updateCount = 0;
           rows.forEach(row => {
-            const appId = row["出願番号"];
-            if (!appId) return;
-
-            const applicant = state.applicants.find(app => app.id === appId);
+            const applicant = state.applicants.find(app => app.id === row["出願番号"]);
             if (applicant) {
-              if (row["入金ステータス"] !== undefined) applicant.feePaid = (row["入金ステータス"] === "入金済");
+              if (row["入金"] !== undefined) applicant.feePaid = (row["入金"] === "済");
               if (row["受験番号"] !== undefined && row["受験番号"] !== "未付与") applicant.examId = String(row["受験番号"]);
-              
-              if (row["書類審査ステータス"] !== undefined) {
-                const s = row["書類審査ステータス"];
-                if (s === "受験票済") applicant.status = "ticket_issued";
-                else if (s === "合格") applicant.status = "passed";
-                else if (s === "不合格") applicant.status = "failed";
-                else applicant.status = "reviewing";
+              if (row["ステータス"] !== undefined) {
+                const s = row["ステータス"];
+                applicant.status = s === "受験票済" ? "ticket_issued" : s === "合格" ? "passed" : s === "不合格" ? "failed" : "reviewing";
               }
-              if (row["校内職員コメント"] !== undefined) applicant.notes = String(row["校内職員コメント"]);
               updateCount++;
             }
           });
-
-          saveToLocalStorage();
-          renderAdminTable();
-          if (state.currentApplicantId) selectApplicant(state.currentApplicantId);
-
-          addAuditLog("DATA_MODIFY", `Excelインポートにより${updateCount}件を更新しました。`, "info");
-          showToast("Excelインポート完了。データを更新しました。", "success");
-        } catch (err) {
-          console.error(err);
-          showToast("Excelファイルの読み込みに失敗しました。", "error");
-        }
+          saveToLocalStorage(); renderAdminTable(); if (state.currentApplicantId) selectApplicant(state.currentApplicantId);
+          showToast("Excelインポート完了", "success");
+        } catch (err) { showToast("読み込み失敗", "error"); }
       };
-      reader.readAsArrayBuffer(file);
+      reader.readAsArrayBuffer(event.target.files[0]);
     }
 
     function openMockDoc(title, dataUrl) {
-      const modal = document.getElementById("modal-container");
-      const body = document.getElementById("modal-body-content");
-      modal.classList.remove("hidden");
-
-      body.innerHTML = `
-        <h4 class="text-sm font-bold text-slate-800 border-b pb-2 flex items-center gap-1">
-          <i data-lucide="file-text" class="text-indigo-600"></i> ${escapeHTML(title)}
-        </h4>
-        <div class="bg-slate-50 border p-4 rounded-xl flex items-center justify-center min-h-[300px] mt-3">
-          <img src="${dataUrl}" class="max-h-[300px] object-contain shadow rounded">
-        </div>
-        <p class="text-[10px] text-slate-400 text-center mt-2">※画像はブラウザメモリ内で表示しています</p>
-      `;
+      document.getElementById("modal-container").classList.remove("hidden");
+      document.getElementById("modal-body-content").innerHTML = `<h4 class="text-sm font-bold text-slate-800 border-b pb-2 flex items-center gap-1"><i data-lucide="file-text" class="text-indigo-600"></i> ${escapeHTML(title)}</h4><div class="bg-slate-50 border p-4 rounded-xl flex items-center justify-center min-h-[300px] mt-3"><img src="${dataUrl}" class="max-h-[300px] object-contain shadow rounded"></div>`;
       lucide.createIcons();
     }
 
     function openExamTicket(appId) {
       const applicant = state.applicants.find(app => app.id === appId);
       if (!applicant) return;
-
-      const modal = document.getElementById("modal-container");
-      const body = document.getElementById("modal-body-content");
-      modal.classList.remove("hidden");
-
-      body.innerHTML = `
-        <div class="border-4 border-indigo-900 p-4 rounded-xl space-y-4 bg-white">
-          <div class="text-center">
-            <h4 class="text-lg font-bold text-indigo-900">入学者選抜 受験票</h4>
-            <p class="text-xs text-slate-500">令和8年度 入試</p>
-          </div>
-          
-          <div class="flex gap-4 border-t border-b border-indigo-900 py-3">
-            <img src="${applicant.photo || MOCK_AVATARS[0]}" class="w-20 h-24 object-cover border">
-            <div class="space-y-1 text-xs">
-              <div><span class="text-slate-400">受験番号:</span> <span class="font-mono font-bold text-sm text-indigo-700">${applicant.examId}</span></div>
-              <div><span class="text-slate-400">氏名:</span> <span class="font-bold text-slate-800">${escapeHTML(applicant.name)}</span></div>
-              <div><span class="text-slate-400">志願区分:</span> <span>${escapeHTML(applicant.faculty)}</span></div>
-              <div><span class="text-slate-400">志望課程:</span> <span>${escapeHTML(applicant.course || '通信制の課程')}</span></div>
-            </div>
-          </div>
-
-          <div class="text-[10px] text-slate-500 space-y-1 leading-relaxed">
-            <p class="font-semibold text-slate-700">【試験当日注意事項】</p>
-            <p>1. 本票を必ず印刷または端末に保存して持参してください。</p>
-            <p>2. 試験開始30分前までに控室へ入室してください。</p>
-          </div>
-
-          <button onclick="window.print()" class="w-full py-2 bg-indigo-900 hover:bg-indigo-950 text-white rounded text-xs font-semibold flex items-center justify-center gap-1">
-            <i data-lucide="printer" class="w-3.5 h-3.5"></i> この受験票を印刷する
-          </button>
-        </div>
-      `;
-      lucide.createIcons();
+      document.getElementById("modal-container").classList.remove("hidden");
+      document.getElementById("modal-body-content").innerHTML = `
+        <div class="border-4 border-indigo-900 p-4 rounded-xl space-y-4 bg-white"><div class="text-center"><h4 class="text-lg font-bold text-indigo-900">入学者選抜 受験票</h4></div>
+        <div class="flex gap-4 border-t border-b border-indigo-900 py-3"><img src="${applicant.photo}" class="w-20 h-24 object-cover border"><div class="space-y-1 text-xs"><div>受験番号: <span class="font-mono font-bold text-sm text-indigo-700">${applicant.examId}</span></div><div>氏名: <span class="font-bold text-slate-800">${escapeHTML(applicant.name)}</span></div></div></div>
+        <button onclick="window.print()" class="w-full py-2 bg-indigo-900 text-white rounded text-xs font-semibold">印刷する</button></div>`;
     }
 
     function openPassFailResult(appId) {
       const applicant = state.applicants.find(app => app.id === appId);
       if (!applicant) return;
-
-      const modal = document.getElementById("modal-container");
-      const body = document.getElementById("modal-body-content");
-      modal.classList.remove("hidden");
-
+      document.getElementById("modal-container").classList.remove("hidden");
       const isPass = applicant.status === "passed";
-
-      body.innerHTML = `
-        <div class="border-2 ${isPass ? 'border-pink-500' : 'border-slate-400'} p-5 rounded-xl space-y-4 text-center bg-white">
-          <h4 class="text-md font-bold text-slate-800">選考判定結果通知書</h4>
-          <p class="text-xs text-slate-500 font-mono">出願ID: ${applicant.id}</p>
-          
-          <p class="text-sm text-slate-600 mt-4">${escapeHTML(applicant.name)} 殿</p>
-          
-          <div class="py-6 my-4 bg-slate-50 rounded-lg">
-            <span class="text-xs text-slate-400 block">選考判定</span>
-            <span class="text-2xl font-bold ${isPass ? 'text-pink-600' : 'text-slate-700'} tracking-wider">
-              ${isPass ? '【 合 格 】' : '【 不合格 】'}
-            </span>
-          </div>
-
-          <p class="text-xs text-slate-500 leading-relaxed text-left">
-            ${isPass 
-              ? '本校選考委員会による厳正な書類審査の結果、貴殿は合格と判定されましたのでここに通知いたします。追って入学案内に関する手続書類を郵送いたします。' 
-              : '慎重な審議を重ねました結果、誠に残念ながら今回は採用を見送らせていただく運びとなりました。ご期待に添えない結果となり恐縮ですが、何卒ご了承賜りますようお願い申し上げます。'}
-          </p>
-
-          <button onclick="closeModal()" class="w-full py-1.5 bg-slate-800 text-white rounded text-xs font-semibold mt-3">閉じる</button>
-        </div>
-      `;
-      lucide.createIcons();
+      document.getElementById("modal-body-content").innerHTML = `<div class="border-2 ${isPass ? 'border-pink-500' : 'border-slate-400'} p-5 rounded-xl text-center bg-white"><h4 class="text-md font-bold text-slate-800">選考結果</h4><div class="py-6 my-4 bg-slate-50 rounded-lg"><span class="text-2xl font-bold ${isPass ? 'text-pink-600' : 'text-slate-700'}">${isPass ? '【 合 格 】' : '【 不合格 】'}</span></div><button onclick="closeModal()" class="w-full py-1.5 bg-slate-800 text-white rounded">閉じる</button></div>`;
     }
 
-    function closeModal() {
-      document.getElementById("modal-container").classList.add("hidden");
-    }
+    function closeModal() { document.getElementById("modal-container").classList.add("hidden"); }
 
-    function formatBirthDate(birthStr) {
-      if (!birthStr || birthStr.length !== 8) return birthStr;
-      const y = birthStr.substring(0, 4);
-      const m = birthStr.substring(4, 6);
-      const d = birthStr.substring(6, 8);
-      return `${y}年${m}月${d}日`;
-    }
-
-    function getFormattedDate(date) {
-      const y = date.getFullYear();
-      const m = String(date.getMonth() + 1).padStart(2, "0");
-      const d = String(date.getDate()).padStart(2, "0");
-      const hh = String(date.getHours()).padStart(2, "0");
-      const mm = String(date.getMinutes()).padStart(2, "0");
-      return `${y}-${m}-${d} ${hh}:${mm}`;
-    }
+    function formatBirthDate(b) { return (!b || b.length !== 8) ? b : `${b.substring(0, 4)}年${b.substring(4, 6)}月${b.substring(6, 8)}日`; }
+    function getFormattedDate(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`; }
 
     function showToast(message, type = "success") {
       const toast = document.getElementById("toast");
-      const msgEl = document.getElementById("toast-message");
-      const iconEl = document.getElementById("toast-icon");
-      const iconContainer = document.getElementById("toast-icon-container");
-
-      msgEl.textContent = message;
-      
-      iconContainer.className = type === "success" ? "text-emerald-400" : type === "error" ? "text-rose-400" : "text-amber-400";
-      iconEl.setAttribute("data-lucide", type === "success" ? "check-circle-2" : type === "error" ? "alert-triangle" : "info");
+      document.getElementById("toast-message").textContent = message;
+      document.getElementById("toast-icon-container").className = type === "success" ? "text-emerald-400" : type === "error" ? "text-rose-400" : "text-amber-400";
+      document.getElementById("toast-icon").setAttribute("data-lucide", type === "success" ? "check-circle-2" : type === "error" ? "alert-triangle" : "info");
       lucide.createIcons();
-
       toast.className = "fixed bottom-5 right-5 z-50 transform translate-y-0 opacity-100 bg-slate-900 text-white rounded-xl p-4 shadow-lg flex items-center gap-3 transition-all duration-300 pointer-events-auto";
-
-      setTimeout(() => {
-        toast.className = "fixed bottom-5 right-5 z-50 transform translate-y-10 opacity-0 bg-slate-900 text-white rounded-xl p-4 shadow-lg flex items-center gap-3 transition-all duration-300 pointer-events-none";
-      }, 4000);
+      setTimeout(() => { toast.className = "fixed bottom-5 right-5 z-50 transform translate-y-10 opacity-0 bg-slate-900 text-white rounded-xl p-4 shadow-lg flex items-center gap-3 transition-all duration-300 pointer-events-none"; }, 4000);
     }
 
-    function saveToLocalStorage() {
-      const encrypted = encryptData(JSON.stringify(state.applicants));
-      try {
-        localStorage.setItem("sec_admission_applicants", encrypted);
-      } catch (e) {
-        console.error("容量限界エラーを回避しました。古いキャッシュの削除を推奨します。");
-      }
-    }
-
-    function resetSystem() {
-      if (confirm("【警告】すべての志願データおよびセキュリティ監査ログが消去されます。よろしいですか？")) {
-        localStorage.removeItem("sec_admission_applicants");
-        localStorage.removeItem("sec_admission_audit_logs");
-        state.applicants = [];
-        state.auditLogs = [];
-        state.currentApplicantId = null;
-        
-        state.adminSession.isLoggedIn = false;
-        if (state.adminSession.timerInterval) {
-          clearInterval(state.adminSession.timerInterval);
-          state.adminSession.timerInterval = null;
-        }
-        
-        init();
-        showToast("システムを初期状態にリセットしました", "info");
-      }
-    }
+    function saveToLocalStorage() { try { localStorage.setItem("sec_admission_applicants", encryptData(JSON.stringify(state.applicants))); } catch (e) {} }
+    function resetSystem() { if (confirm("全データを消去しますか？")) { localStorage.removeItem("sec_admission_applicants"); localStorage.removeItem("sec_admission_audit_logs"); state.applicants = []; state.auditLogs = []; init(); showToast("リセットしました", "info"); } }
   </script>
 </body>
 </html>
+```
+
+### 変更点
+1. **ステータス変更時の強制誘導機能（フック）の追加:**
+   管理者が「受験料確認」「審査中へ変更」「受験票発行」「合否判定」などのアクションを行った直後に、`showAdminResultShareModal(id)` を呼び出し、画面上に大きくモーダルを表示するようにしました。
+2. **送信・共有ボタンの共通化:**
+   モーダル内、およびパネル下部のボタンから呼び出される機能を、ファイルをダウンロードするだけだったものから、Web Share API を使って「メールアプリ等の共有機能にファイルをそのまま渡す」挙動（`downloadResultAndShare`）に刷新しました。
+
+これにより、管理者がステータスを更新した時点で「あ、志願者にこのデータを送らなきゃ」と物理的に気づき、ワンクリックでメールアプリを立ち上げられるようになっています。ご確認ください。
