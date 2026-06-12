@@ -756,6 +756,35 @@
       }
     }
 
+    function copyToClipboard(valId, btnId) {
+      const copyVal = document.getElementById(valId);
+      if (!copyVal) return;
+      
+      copyVal.select();
+      copyVal.setSelectionRange(0, 99999); 
+
+      try {
+        const successful = document.execCommand('copy');
+        if (successful) {
+          showToast("コピーしました！", "success");
+          const btn = document.getElementById(btnId);
+          if (btn) {
+            const originalText = btn.innerHTML;
+            btn.innerHTML = "<i data-lucide='check' class='w-3.5 h-3.5'></i>";
+            lucide.createIcons();
+            setTimeout(() => {
+              btn.innerHTML = originalText;
+              lucide.createIcons();
+            }, 2000);
+          }
+        } else {
+          showToast("手動でコピーしてください。", "error");
+        }
+      } catch (err) {
+        showToast("手動でコピーしてください。", "error");
+      }
+    }
+
     function handleFormSubmit(event) {
       event.preventDefault();
       const birth = document.getElementById("app-birth").value.trim();
@@ -834,36 +863,147 @@
       showToast("ファイルを保存しました。メールに添付してください。", "success");
     }
 
+    function getEmailLinkData(applicant) {
+      const schoolEmail = "t-itoryoh@e.osakamanabi.jp";
+      const subject = `出願データ送信（出願番号：${applicant.id} / ${applicant.name}）`;
+      const body = `本校宛に「出願データ (.dat)」を添付して送信してください。\n\n※このままファイルを添付して送信してください。\n・出願番号: ${applicant.id}\n・氏名: ${applicant.name}`;
+
+      return {
+        email: schoolEmail,
+        subject: subject,
+        body: body,
+        mailto: `mailto:${schoolEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+      };
+    }
+
+    function toggleConfirmBtn(checkbox) {
+      const confirmBtn = document.getElementById("btn-final-confirm");
+      if (checkbox.checked) {
+        confirmBtn.disabled = false;
+        confirmBtn.className = "w-full py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-bold shadow-md transition cursor-pointer";
+      } else {
+        confirmBtn.disabled = true;
+        confirmBtn.className = "w-full py-2.5 bg-slate-300 text-slate-500 rounded-lg text-sm font-bold cursor-not-allowed transition";
+      }
+    }
+
     function showRegistrationCompleteModal(applicant) {
       const modal = document.getElementById("modal-container");
       const bodyContent = document.getElementById("modal-body-content");
       modal.classList.remove("hidden");
 
+      const mailData = getEmailLinkData(applicant);
+
       bodyContent.innerHTML = `
-        <div class="text-center space-y-4">
+        <div class="text-center space-y-4 max-w-lg mx-auto">
+          <!-- 警告アイコン -->
           <div class="mx-auto w-14 h-14 bg-red-100 text-red-600 rounded-full flex items-center justify-center shadow-md animate-bounce">
             <i data-lucide="alert-triangle" class="w-7 h-7"></i>
           </div>
           
-          <h4 class="text-2xl font-black text-red-600 tracking-tight">まだ出願は完了していません！</h4>
-          <p class="text-xs font-bold text-slate-700">「出願データ」をメールで送信する必要があります。</p>
+          <!-- 最も目立つ警告メッセージ -->
+          <h4 class="text-2xl font-black text-red-600 tracking-tight leading-tight">
+            まだ出願は完了していません！
+          </h4>
+          <p class="text-xs font-bold text-slate-500">
+            お手元の「出願データ」をメールで本校に送信していただく必要があります。
+          </p>
           
-          <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 text-left space-y-4 shadow-sm">
-             <div class="text-center">
-               <p class="text-sm font-bold text-slate-800 mb-2">下のボタンを押して、メールで送信してください</p>
-               <button onclick="shareOrDownloadDatFile(JSON.parse(decryptData('${encryptData(JSON.stringify(applicant))}')))" class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-md text-base font-bold flex justify-center items-center gap-2 transition transform hover:scale-105">
-                  <i data-lucide="send" class="w-5 h-5"></i> ファイルをメールに渡して送信する
+          <!-- 手順ボード -->
+          <div class="bg-red-50 border border-red-200 p-4 rounded-xl text-left space-y-3 text-xs text-slate-800 shadow-sm">
+            <p class="font-bold text-red-800 flex items-center gap-1.5 border-b border-red-100 pb-1.5 text-sm">
+              <i data-lucide="mail-warning" class="w-4 h-4 text-red-600"></i>メール提出手順 (Gmail等も対応)
+            </p>
+            
+            <div class="space-y-1">
+              <span class="font-bold text-slate-800">1. 出願データを保存・共有する</span>
+              <p class="text-slate-600 pl-2">下のボタンから出願データを保存、またはメールアプリに渡してください。</p>
+               <button onclick="shareOrDownloadDatFile(JSON.parse(decryptData('${encryptData(JSON.stringify(applicant))}')))" class="w-full mt-2 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm text-sm font-bold flex justify-center items-center gap-2 transition">
+                  <i data-lucide="share" class="w-4 h-4"></i> ファイルを保存・共有する
                </button>
-               <p class="text-[10px] text-slate-500 mt-2">※スマホの場合は、メールアプリが開きファイルが自動添付されます。<br>宛先 <strong class="text-slate-700">t-itoryoh@e.osakamanabi.jp</strong> を入力して送信してください。</p>
-             </div>
-             
-             <div class="bg-red-50 border border-red-200 p-3 rounded mt-3 text-center">
-                <p class="text-red-700 font-bold text-xs"><i data-lucide="paperclip" class="w-4 h-4 inline"></i> 警告: PC等の場合で自動添付されない場合は、保存された「出願データ(.dat)」ファイルを手動でメールに添付してください。</p>
-             </div>
+               <div class="bg-white p-2 mt-2 rounded border border-red-100 font-mono font-bold text-indigo-700 text-center text-[10px] break-all select-all shadow-inner">
+                出願データ_${applicant.id}_${applicant.name.replace(/\s+/g, "")}.dat
+              </div>
+            </div>
+
+            <!-- 添付忘れ防止警告 -->
+            <div class="bg-yellow-100 border-l-4 border-yellow-500 p-2.5 rounded space-y-1 mt-2">
+              <p class="font-bold text-yellow-800 flex items-center gap-1 text-[11px] animate-pulse">
+                <i data-lucide="paperclip" class="w-4 h-4"></i> 【重要】ファイルの添付忘れに注意！
+              </p>
+              <p class="text-slate-700 text-[10px] leading-relaxed font-semibold">
+                本文だけを送っても、<span class="text-red-600 underline">「.dat」出願ファイルが添付されていないと未出願の扱い</span>になります。
+              </p>
+            </div>
+
+            <div class="space-y-3 pt-2 border-t border-red-100">
+              <span class="font-bold text-slate-800 block">2. メールを作成して送信する</span>
+              <p class="text-slate-600 pl-2">ご利用の環境に合わせて、【方法A】または【方法B】で送信してください。</p>
+
+              <!-- 方法A: mailto -->
+              <div class="bg-white p-3 rounded-lg border border-slate-200 space-y-2">
+                <div class="flex items-center gap-1">
+                  <span class="inline-block bg-indigo-100 text-indigo-800 font-bold px-1.5 py-0.5 rounded text-[10px]">方法 A</span>
+                  <span class="text-slate-700 font-semibold text-[11px]">メールアプリを自動起動</span>
+                </div>
+                <button onclick="window.location.href='${mailData.mailto}'" class="w-full py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-bold flex items-center justify-center gap-1 shadow-sm transition">
+                  <i data-lucide="mail" class="w-3.5 h-3.5"></i> メール作成画面を開く
+                </button>
+              </div>
+
+              <!-- 方法B: コピペ -->
+              <div class="bg-white p-3 rounded-lg border border-slate-200 space-y-2">
+                <div class="flex items-center gap-1">
+                  <span class="inline-block bg-teal-100 text-teal-800 font-bold px-1.5 py-0.5 rounded text-[10px]">方法 B</span>
+                  <span class="text-slate-700 font-semibold text-[11px]">Gmail等のためのコピー用テンプレート</span>
+                </div>
+                <p class="text-slate-500 text-[10px] pl-1">
+                  自動でアプリが開かない場合は、以下をコピーしてメール作成画面に貼り付けてください。
+                </p>
+
+                <div class="space-y-2 pt-1 text-[10px]">
+                  <div class="space-y-0.5">
+                    <span class="font-semibold text-slate-600">宛先メールアドレス</span>
+                    <div class="flex gap-1">
+                      <input type="text" id="tmpl-email" readonly value="${mailData.email}" class="flex-grow px-2 py-1 bg-slate-50 border rounded text-[10px] font-mono select-all">
+                      <button onclick="copyToClipboard('tmpl-email', 'btn-copy-email')" id="btn-copy-email" class="px-2.5 py-1 bg-slate-800 text-white rounded text-[10px] font-bold flex items-center gap-0.5 hover:bg-slate-700 shrink-0">
+                        <i data-lucide="copy" class="w-3 h-3"></i> コピー
+                      </button>
+                    </div>
+                  </div>
+                  <div class="space-y-0.5">
+                    <span class="font-semibold text-slate-600">件名</span>
+                    <div class="flex gap-1">
+                      <input type="text" id="tmpl-sub" readonly value="${escapeHTML(mailData.subject)}" class="flex-grow px-2 py-1 bg-slate-50 border rounded text-[10px] truncate font-mono select-all">
+                      <button onclick="copyToClipboard('tmpl-sub', 'btn-copy-sub')" id="btn-copy-sub" class="px-2.5 py-1 bg-slate-800 text-white rounded text-[10px] font-bold flex items-center gap-0.5 hover:bg-slate-700 shrink-0">
+                        <i data-lucide="copy" class="w-3 h-3"></i> コピー
+                      </button>
+                    </div>
+                  </div>
+                  <div class="space-y-0.5">
+                    <div class="flex justify-between items-center">
+                      <span class="font-semibold text-slate-600">本文</span>
+                      <button onclick="copyToClipboard('tmpl-body', 'btn-copy-body')" id="btn-copy-body" class="px-2.5 py-1 bg-slate-800 text-white rounded text-[10px] font-bold flex items-center gap-0.5 hover:bg-slate-700 shrink-0">
+                        <i data-lucide="copy" class="w-3 h-3"></i> 本文をコピー
+                      </button>
+                    </div>
+                    <textarea id="tmpl-body" readonly class="w-full h-16 p-2 bg-slate-50 border rounded text-[10px] font-mono leading-relaxed resize-none select-all">${escapeHTML(mailData.body)}</textarea>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-          
-          <button onclick="closeModal(); queryApplicationStatus();" class="w-full py-2.5 bg-slate-300 hover:bg-slate-400 text-slate-700 rounded-lg text-sm font-bold mt-2 transition">
-             確認して画面を閉じる
+
+          <!-- 添付確認チェックボックス -->
+          <label class="flex items-center gap-2.5 cursor-pointer bg-red-100 hover:bg-red-200 p-3 rounded-lg border border-red-300 text-left transition duration-200">
+            <input type="checkbox" id="chk-attachment-confirm" onchange="toggleConfirmBtn(this)" class="h-5 w-5 text-red-600 border-red-300 rounded focus:ring-red-500 shrink-0">
+            <span class="text-[11px] font-black text-red-700 leading-snug">
+              出願ファイルをメールに間違いなく添付した、またはこれから添付することを確認しました。<span class="text-red-600 font-extrabold">*必須</span>
+            </span>
+          </label>
+
+          <button id="btn-final-confirm" disabled onclick="closeModal(); queryApplicationStatus();" class="w-full py-2.5 bg-slate-300 text-slate-500 rounded-lg text-sm font-bold cursor-not-allowed transition">
+             確認して次へ進む
           </button>
         </div>
       `;
@@ -1070,34 +1210,77 @@
       event.target.value = ""; 
     }
 
+    // --- ★ 管理者側の取り込み処理 (.dat, .txt, .text 全対応へ柔軟化) ---
     function processDatFiles(files) {
-      if (!state.adminSession.isLoggedIn) return showToast("データ追加には管理者認証が必要です", "error");
-      let successCount = 0, existCount = 0, errorCount = 0, filesProcessed = 0;
+      if (!state.adminSession.isLoggedIn) {
+        showToast("データ追加には管理者認証が必要です", "error");
+        return;
+      }
+
+      let successCount = 0;
+      let existCount = 0;
+      let errorCount = 0;
+      let filesProcessed = 0;
+
       Array.from(files).forEach(file => {
-        const f = file.name.toLowerCase();
-        if (!f.endsWith(".dat") && !f.endsWith(".txt") && !f.endsWith(".text")) { errorCount++; filesProcessed++; checkAllProcessed(); return; }
+        const fileNameLower = file.name.toLowerCase();
+        if (!fileNameLower.endsWith(".dat") && !fileNameLower.endsWith(".txt") && !fileNameLower.endsWith(".text")) {
+          errorCount++;
+          filesProcessed++;
+          checkAllProcessed();
+          return;
+        }
+
         const reader = new FileReader();
         reader.onload = function(e) {
           try {
-            const applicantObj = JSON.parse(decryptData(e.target.result.trim()));
+            const rawEncrypted = e.target.result.trim();
+            const decryptedJSON = decryptData(rawEncrypted);
+            const applicantObj = JSON.parse(decryptedJSON);
+
             if (applicantObj && applicantObj.id && applicantObj.name) {
-              const existingIndex = state.applicants.findIndex(app => app.id === applicantObj.id);
-              if (existingIndex >= 0) { state.applicants[existingIndex] = applicantObj; existCount++; }
-              else { state.applicants.push(applicantObj); successCount++; }
-            } else errorCount++;
-          } catch (err) { errorCount++; }
-          filesProcessed++; checkAllProcessed();
+              const isExist = state.applicants.some(app => app.id === applicantObj.id);
+              if (isExist) {
+                existCount++;
+              } else {
+                state.applicants.push(applicantObj);
+                successCount++;
+              }
+            } else {
+              errorCount++;
+            }
+          } catch (err) {
+            console.error("ファイル解読エラー:", err);
+            errorCount++;
+          }
+
+          filesProcessed++;
+          checkAllProcessed();
         };
+        
         reader.readAsText(file);
       });
 
       function checkAllProcessed() {
         if (filesProcessed === files.length) {
-          if (successCount > 0 || existCount > 0) { saveToLocalStorage(); renderAdminTable(); }
-          addAuditLog("DATA_MODIFY", `暗号化ファイル取り込み。新規: ${successCount}, 更新: ${existCount}, 失敗: ${errorCount}`, "info");
-          if (successCount > 0) showToast(`${successCount}件を取り込みました`, "success");
-          else if (existCount > 0) showToast(`${existCount}件のデータを最新に更新しました`, "success");
-          else showToast(`読み込みに失敗しました`, "error");
+          if (successCount > 0) {
+            saveToLocalStorage();
+            renderAdminTable();
+          }
+
+          addAuditLog(
+            "DATA_MODIFY", 
+            `暗号化ファイルを一括取り込み。成功: ${successCount}件, 重複無視: ${existCount}件, 失敗: ${errorCount}件`,
+            "info"
+          );
+
+          if (successCount > 0) {
+            showToast(`${successCount}件の出願データ（.dat / .txt）を正常に取り込み・復号しました`, "success");
+          } else if (existCount > 0) {
+            showToast(`取り込まれたデータはすべて登録済みでした（${existCount}件）`, "info");
+          } else {
+            showToast(`ファイルの解読に失敗しました。正しい出願ファイル(.dat または .txt)かご確認ください。`, "error");
+          }
         }
       }
     }
@@ -1105,9 +1288,21 @@
     function renderAdminTable() {
       const tbody = document.getElementById("admin-table-body");
       document.getElementById("applicant-count").textContent = state.applicants.length;
-      if (state.applicants.length === 0) return tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-slate-400">出願者データがありません。「.dat」や「.txt」ファイルを放り込むか、デモデータを作成してください。</td></tr>`;
+      
+      if (state.applicants.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" class="p-8 text-center text-slate-400">出願者データがありません。「.dat」や「.txt」ファイルを放り込むか、デモデータを作成してください。</td>
+          </tr>
+        `;
+        return;
+      }
+
       tbody.innerHTML = state.applicants.map(app => {
-        const feeBadge = app.feePaid ? `<span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-[10px] font-semibold">領収済</span>` : `<span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-[10px] font-semibold">要照合</span>`;
+        const feeBadge = app.feePaid 
+          ? `<span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-[10px] font-semibold">領収済</span>` 
+          : `<span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-[10px] font-semibold">要照合</span>`;
+        
         let statusBadge = "";
         switch (app.status) {
           case "applied": statusBadge = `<span class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[10px] font-semibold">未着手</span>`; break;
@@ -1116,33 +1311,105 @@
           case "passed": statusBadge = `<span class="bg-pink-100 text-pink-800 px-2 py-0.5 rounded text-[10px] font-semibold">合格決定</span>`; break;
           case "failed": statusBadge = `<span class="bg-slate-300 text-slate-800 px-2 py-0.5 rounded text-[10px] font-semibold">不合格</span>`; break;
         }
-        return `<tr class="hover:bg-slate-50 transition"><td class="p-3"><button onclick="selectApplicant('${app.id}')" class="font-mono font-bold text-indigo-600 hover:underline">${app.id}</button></td><td class="p-3"><div class="font-bold text-slate-800">${escapeHTML(app.name)}</div><div class="text-[10px] text-slate-400">${escapeHTML(app.kana)}</div></td><td class="p-3 text-slate-600">${escapeHTML(app.faculty)}</td><td class="p-3">${feeBadge}</td><td class="p-3">${statusBadge}</td><td class="p-3">${app.examId ? `<span class="font-mono font-bold text-slate-700">${app.examId}</span>` : `<span class="text-slate-400">未付与</span>`}</td><td class="p-3"><button onclick="selectApplicant('${app.id}')" class="text-indigo-600 hover:text-indigo-900 font-semibold text-[11px] flex items-center gap-0.5"><i data-lucide="eye" class="w-3.5 h-3.5"></i>審査</button></td></tr>`;
+
+        const examIdText = app.examId ? `<span class="font-mono font-bold text-slate-700">${app.examId}</span>` : `<span class="text-slate-400">未付与</span>`;
+
+        return `
+          <tr class="hover:bg-slate-50 transition">
+            <td class="p-3"><button onclick="selectApplicant('${app.id}')" class="font-mono font-bold text-indigo-600 hover:underline">${app.id}</button></td>
+            <td class="p-3">
+              <div class="font-bold text-slate-800">${escapeHTML(app.name)}</div>
+              <div class="text-[10px] text-slate-400">${escapeHTML(app.kana)}</div>
+            </td>
+            <td class="p-3 text-slate-600">${escapeHTML(app.faculty)}</td>
+            <td class="p-3">${feeBadge}</td>
+            <td class="p-3">${statusBadge}</td>
+            <td class="p-3">${examIdText}</td>
+            <td class="p-3">
+              <button onclick="selectApplicant('${app.id}')" class="text-indigo-600 hover:text-indigo-900 font-semibold text-[11px] flex items-center gap-0.5"><i data-lucide="eye" class="w-3.5 h-3.5"></i>審査</button>
+            </td>
+          </tr>
+        `;
       }).join("");
       lucide.createIcons();
     }
 
+    // --- ★ 管理者画面での審査ボード（ステータス表示の直感化） ---
     function selectApplicant(id) {
       state.currentApplicantId = id;
       const applicant = state.applicants.find(app => app.id === id);
       if (!applicant) return;
+
       document.getElementById("check-panel-empty").classList.add("hidden");
       const panel = document.getElementById("check-panel-content");
       panel.classList.remove("hidden");
 
       panel.innerHTML = `
         <div class="space-y-3">
-          <div class="flex items-center gap-3"><img class="w-12 h-16 object-cover border rounded" src="${applicant.photo || MOCK_AVATARS[0]}"><div><div class="font-bold text-slate-800 text-sm">${escapeHTML(applicant.name)}</div><div class="text-slate-400 text-[10px]">${applicant.id}</div><div class="text-slate-400 text-[10px]">前籍校: ${escapeHTML(applicant.prevSchool || '未登録')} (${escapeHTML(applicant.prevCourse || '')})</div></div></div>
+          <div class="flex items-center gap-3">
+            <img class="w-12 h-16 object-cover border rounded" src="${applicant.photo || MOCK_AVATARS[0]}">
+            <div>
+              <div class="font-bold text-slate-800 text-sm">${escapeHTML(applicant.name)}</div>
+              <div class="text-slate-400 text-[10px]">${applicant.id}</div>
+              <div class="text-slate-400 text-[10px]">前籍校: ${escapeHTML(applicant.prevSchool || '未登録')} (${escapeHTML(applicant.prevCourse || '')})</div>
+            </div>
+          </div>
+
           <div class="border-t border-slate-100 my-2 pt-2 space-y-2">
             <div class="font-semibold text-slate-700">提出・送付資料一覧:</div>
-            <div class="bg-indigo-50/50 p-2.5 rounded border border-indigo-100 space-y-1"><div class="flex justify-between items-center"><span class="font-bold text-[11px] text-slate-700">成績単位修得証明書 (郵送/直接)</span><span class="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-bold">在籍校送付</span></div><p class="text-[10px] text-slate-500">在籍校より直接郵送されてきた原本とデータに相違がないか照合してください。</p></div>
-            <div class="flex justify-between items-center bg-slate-50 p-2 rounded border border-slate-100"><span class="truncate pr-2 text-slate-600 text-[11px]">受験料：${escapeHTML(applicant.receiptName)}</span><div class="flex gap-1.5"><button onclick="openMockDoc('領収証プレビュー', '${applicant.receipt}')" class="text-indigo-600 hover:underline">表示</button><button onclick="toggleFeePaid('${applicant.id}')" class="px-2 py-0.5 rounded text-[10px] ${applicant.feePaid ? 'bg-emerald-600 text-white' : 'bg-slate-300 text-slate-700'}">${applicant.feePaid ? '受領済' : '確認'}</button></div></div>
+            
+            <div class="bg-indigo-50/50 p-2.5 rounded border border-indigo-100 space-y-1">
+              <div class="flex justify-between items-center">
+                <span class="font-bold text-[11px] text-slate-700">成績単位修得証明書 (郵送/直接)</span>
+                <span class="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-bold">在籍校送付</span>
+              </div>
+              <p class="text-[10px] text-slate-500">在籍校より直接郵送されてきた原本とデータに相違がないか照合してください。</p>
+            </div>
+
+            <div class="flex justify-between items-center bg-slate-50 p-2 rounded border border-slate-100">
+              <span class="truncate pr-2 text-slate-600 text-[11px]">受験料：${escapeHTML(applicant.receiptName)}</span>
+              <div class="flex gap-1.5">
+                <button onclick="openMockDoc('領収証プレビュー', '${applicant.receipt}')" class="text-indigo-600 hover:underline">表示</button>
+                <button onclick="toggleFeePaid('${applicant.id}')" class="px-2 py-0.5 rounded text-[10px] ${applicant.feePaid ? 'bg-emerald-600 text-white' : 'bg-slate-300 text-slate-700'}">${applicant.feePaid ? '受領済' : '確認'}</button>
+              </div>
+            </div>
           </div>
+
+          <!-- 個別判定・審査操作 -->
           <div class="border-t border-slate-100 my-2 pt-2 space-y-3">
-            <div class="flex justify-between items-center bg-slate-50 p-2 rounded border"><span class="text-xs font-bold text-slate-700">現在のステータス</span>${applicant.status === 'applied' ? '<span class="text-xs bg-slate-200 px-2 py-1 rounded font-bold">未着手</span>' : applicant.status === 'reviewing' ? '<span class="text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded font-bold">審査中</span>' : applicant.status === 'ticket_issued' ? `<span class="text-xs bg-indigo-200 text-indigo-800 px-2 py-1 rounded font-bold">受験票済 (番号: ${applicant.examId})</span>` : applicant.status === 'passed' ? '<span class="text-xs bg-pink-200 text-pink-800 px-2 py-1 rounded font-bold">合格</span>' : '<span class="text-xs bg-slate-300 px-2 py-1 rounded font-bold">不合格</span>'}</div>
-            <div><label class="block font-semibold text-slate-600 mb-1">個別連絡メモ・通知</label><textarea id="panel-notes" class="w-full border p-2 rounded text-xs" rows="2" placeholder="在籍校からの書類確認状況や不備通知など">${escapeHTML(applicant.notes)}</textarea></div>
-            <div class="grid grid-cols-2 gap-2"><button onclick="updateApplicantStatus('${applicant.id}', 'reviewing')" class="py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded shadow-sm transition">審査中にする</button><button onclick="issueExamTicket('${applicant.id}')" class="py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded shadow-sm transition">受験票を発行する</button></div>
-            <div class="border-t border-slate-100 pt-2 flex gap-2"><button onclick="updateApplicantStatus('${applicant.id}', 'passed')" class="flex-grow py-1.5 bg-pink-600 hover:bg-pink-700 text-white font-semibold rounded shadow-sm transition">選考：合格</button><button onclick="updateApplicantStatus('${applicant.id}', 'failed')" class="flex-grow py-1.5 bg-slate-500 hover:bg-slate-600 text-white font-semibold rounded shadow-sm transition">選考：不合格</button></div>
-            <div class="border-t border-slate-100 pt-2 flex flex-col gap-2"><button onclick="downloadResultAndShare('${applicant.id}')" class="w-full py-1.5 bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded shadow-sm transition flex items-center justify-center gap-1"><i data-lucide="mail-check" class="w-3.5 h-3.5"></i> 志願者への返信用データを出力・送信する</button><p class="text-[9px] text-slate-500 text-center leading-tight">※ステータス更新後、このファイルを出力して志願者へメールで返信してください。<br>志願者はこのファイルをスマホ等で読み込むことで最新結果を確認できます。</p></div>
+            <div class="flex justify-between items-center bg-slate-50 p-2 rounded border">
+              <span class="text-xs font-bold text-slate-700">現在のステータス</span>
+              ${
+                applicant.status === 'applied' ? '<span class="text-xs bg-slate-200 px-2 py-1 rounded font-bold">未着手</span>' :
+                applicant.status === 'reviewing' ? '<span class="text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded font-bold">審査中</span>' :
+                applicant.status === 'ticket_issued' ? `<span class="text-xs bg-indigo-200 text-indigo-800 px-2 py-1 rounded font-bold">受験票済 (番号: ${applicant.examId})</span>` :
+                applicant.status === 'passed' ? '<span class="text-xs bg-pink-200 text-pink-800 px-2 py-1 rounded font-bold">合格</span>' :
+                '<span class="text-xs bg-slate-300 px-2 py-1 rounded font-bold">不合格</span>'
+              }
+            </div>
+
+            <div>
+              <label class="block font-semibold text-slate-600 mb-1">個別連絡メモ・通知</label>
+              <textarea id="panel-notes" class="w-full border p-2 rounded text-xs" rows="2" placeholder="在籍校からの書類確認状況や不備通知など">${escapeHTML(applicant.notes)}</textarea>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2">
+              <button onclick="updateApplicantStatus('${applicant.id}', 'reviewing')" class="py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded shadow-sm transition">審査中にする</button>
+              <button onclick="issueExamTicket('${applicant.id}')" class="py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded shadow-sm transition">受験票を発行する</button>
+            </div>
+            
+            <div class="border-t border-slate-100 pt-2 flex gap-2">
+              <button onclick="updateApplicantStatus('${applicant.id}', 'passed')" class="flex-grow py-1.5 bg-pink-600 hover:bg-pink-700 text-white font-semibold rounded shadow-sm transition">選考：合格</button>
+              <button onclick="updateApplicantStatus('${applicant.id}', 'failed')" class="flex-grow py-1.5 bg-slate-500 hover:bg-slate-600 text-white font-semibold rounded shadow-sm transition">選考：不合格</button>
+            </div>
+            
+            <!-- ★ 志願者への返信用ファイル出力機能 -->
+            <div class="border-t border-slate-100 pt-2 flex flex-col gap-2">
+              <button onclick="downloadResultAndShare('${applicant.id}')" class="w-full py-1.5 bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded shadow-sm transition flex items-center justify-center gap-1">
+                <i data-lucide="mail-check" class="w-3.5 h-3.5"></i> 志願者への返信用データを出力・送信する
+              </button>
+              <p class="text-[9px] text-slate-500 text-center leading-tight">※ステータス更新後、このファイルを出力して志願者へメールで返信してください。<br>志願者はこのファイルをスマホ等で読み込むことで最新結果を確認できます。</p>
+            </div>
           </div>
         </div>
       `;
@@ -1378,12 +1645,3 @@
   </script>
 </body>
 </html>
-```
-
-### 変更点
-1. **ステータス変更時の強制誘導機能（フック）の追加:**
-   管理者が「受験料確認」「審査中へ変更」「受験票発行」「合否判定」などのアクションを行った直後に、`showAdminResultShareModal(id)` を呼び出し、画面上に大きくモーダルを表示するようにしました。
-2. **送信・共有ボタンの共通化:**
-   モーダル内、およびパネル下部のボタンから呼び出される機能を、ファイルをダウンロードするだけだったものから、Web Share API を使って「メールアプリ等の共有機能にファイルをそのまま渡す」挙動（`downloadResultAndShare`）に刷新しました。
-
-これにより、管理者がステータスを更新した時点で「あ、志願者にこのデータを送らなきゃ」と物理的に気づき、ワンクリックでメールアプリを立ち上げられるようになっています。ご確認ください。
