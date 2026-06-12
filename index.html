@@ -102,10 +102,10 @@
             <div class="bg-teal-50 text-teal-600 p-4 rounded-xl group-hover:bg-teal-600 group-hover:text-white transition-all">
               <i data-lucide="search" class="w-8 h-8"></i>
             </div>
-            <span class="text-xs font-semibold text-teal-600 bg-teal-50 px-2.5 py-1 rounded-full">リアルタイム反映</span>
+            <span class="text-xs font-semibold text-teal-600 bg-teal-50 px-2.5 py-1 rounded-full">最新データ読込</span>
           </div>
           <h3 class="text-lg font-bold text-slate-800 mt-4 group-hover:text-teal-900">2. 出願状況・合否を確認する</h3>
-          <p class="text-sm text-slate-500 mt-2">提出されたメールデータをもとに事務局で処理された、最新の進捗状況（受験票のダウンロード、合格判定の通知）を安全に確認できます。</p>
+          <p class="text-sm text-slate-500 mt-2">事務局からメールで返信された「結果データ」を読み込むことで、最新の進捗状況や受験票、合否通知を安全にスマホで確認できます。</p>
         </button>
       </div>
 
@@ -297,19 +297,36 @@
         </div>
 
         <!-- 照会ログインフォーム -->
-        <div id="status-login-container" class="max-w-md mx-auto py-8 space-y-4">
-          <p class="text-sm text-slate-500 text-center">出願時に登録した「氏名」と「メールアドレス」を入力してください。</p>
-          <div class="space-y-3">
-            <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1">氏名 (漢字)</label>
-              <input type="text" id="login-name" placeholder="教育 太郎" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm">
+        <div id="status-login-container" class="max-w-md mx-auto py-8 space-y-6">
+          <!-- 端末履歴からの確認 -->
+          <div class="space-y-4">
+            <p class="text-sm text-slate-600 text-center font-bold border-b pb-2">現在の端末の履歴から確認する</p>
+            <div class="space-y-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">氏名 (漢字)</label>
+                <input type="text" id="login-name" placeholder="教育 太郎" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">メールアドレス</label>
+                <input type="email" id="login-email" placeholder="taro@example.com" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm">
+              </div>
+              <button onclick="queryApplicationStatus()" class="w-full py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-semibold shadow transition">状況を確認する</button>
+              <p id="login-error" class="hidden text-xs text-red-500 text-center font-semibold">一致するデータが見つかりませんでした。</p>
             </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1">メールアドレス</label>
-              <input type="email" id="login-email" placeholder="taro@example.com" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm">
-            </div>
-            <button onclick="queryApplicationStatus()" class="w-full py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-semibold shadow">状況を確認する</button>
-            <p id="login-error" class="hidden text-xs text-red-500 text-center font-semibold">一致するデータが見つかりませんでした。</p>
+          </div>
+
+          <div class="text-center text-slate-400 font-bold text-sm">または</div>
+
+          <!-- 新規：学校からの結果ファイル読み込み (双方向同期の実現) -->
+          <div class="bg-indigo-50 p-5 rounded-xl border border-indigo-100 space-y-3 text-center shadow-inner">
+            <p class="text-sm font-bold text-indigo-900 flex justify-center items-center gap-1">
+              <i data-lucide="refresh-cw" class="w-4 h-4"></i> 学校から届いた結果で更新する
+            </p>
+            <p class="text-xs text-indigo-700 leading-relaxed text-left px-2">事務局からメールで返信された「審査結果データ (.dat)」をここで読み込むと、最新の受験票や合否状況が表示されます。</p>
+            <button onclick="document.getElementById('result-file-picker').click()" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold shadow-sm transition flex justify-center items-center gap-2">
+              <i data-lucide="upload" class="w-4 h-4"></i> 結果データを選択して読み込む
+            </button>
+            <input type="file" id="result-file-picker" accept=".dat,.txt,.text" class="hidden" onchange="loadResultFile(event)">
           </div>
         </div>
 
@@ -1097,6 +1114,46 @@
       renderStatusChecker(applicant);
     }
 
+    // ★ スマホ等から最新の結果ファイルを読み込む機能
+    function loadResultFile(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const rawEncrypted = e.target.result.trim();
+          const decryptedJSON = decryptData(rawEncrypted);
+          const applicantObj = JSON.parse(decryptedJSON);
+
+          if (applicantObj && applicantObj.id && applicantObj.name) {
+            // 既存データを上書き、または追加
+            const existingIndex = state.applicants.findIndex(app => app.id === applicantObj.id);
+            if (existingIndex >= 0) {
+              state.applicants[existingIndex] = applicantObj;
+            } else {
+              state.applicants.push(applicantObj);
+            }
+            saveToLocalStorage();
+            
+            showToast("最新の状況に更新しました！", "success");
+            
+            document.getElementById("status-login-container").classList.add("hidden");
+            document.getElementById("status-result-container").classList.remove("hidden");
+            state.currentApplicantId = applicantObj.id;
+            renderStatusChecker(applicantObj);
+          } else {
+            showToast("ファイルの形式が正しくありません", "error");
+          }
+        } catch(err) {
+          console.error(err);
+          showToast("ファイルの読み込みに失敗しました", "error");
+        }
+      };
+      reader.readAsText(file);
+      event.target.value = "";
+    }
+
     // --- ★ 進行状況(タイムライン)の正確な反映ロジック修正 ---
     function renderStatusChecker(applicant) {
       document.getElementById("res-app-id").textContent = `出願ID: ${applicant.id}`;
@@ -1139,11 +1196,11 @@
         currentStepIdx = 2;
       } else if (applicant.status === "ticket_issued") {
         completedSteps.push("review");
-        currentStepIdx = 3; // 受験票発行ステップがアクティブになる
+        currentStepIdx = 3; 
       } else if (applicant.status === "passed" || applicant.status === "failed") {
         completedSteps.push("review");
         completedSteps.push("ticket");
-        currentStepIdx = 4; // 合否結果ステップがアクティブになる
+        currentStepIdx = 4; 
       }
 
       steps.forEach((step, idx) => {
@@ -1379,6 +1436,7 @@
       event.target.value = ""; 
     }
 
+    // --- ★ 管理者側の取り込み処理 (.dat, .txt, .text 全対応へ柔軟化) ---
     function processDatFiles(files) {
       if (!state.adminSession.isLoggedIn) {
         showToast("データ追加には管理者認証が必要です", "error");
@@ -1570,10 +1628,37 @@
               <button onclick="updateApplicantStatus('${applicant.id}', 'passed')" class="flex-grow py-1.5 bg-pink-600 hover:bg-pink-700 text-white font-semibold rounded shadow-sm transition">選考：合格</button>
               <button onclick="updateApplicantStatus('${applicant.id}', 'failed')" class="flex-grow py-1.5 bg-slate-500 hover:bg-slate-600 text-white font-semibold rounded shadow-sm transition">選考：不合格</button>
             </div>
+            
+            <!-- ★ 志願者への返信用ファイル出力機能 -->
+            <div class="border-t border-slate-100 pt-2 flex flex-col gap-2">
+              <button onclick="downloadResultFile('${applicant.id}')" class="w-full py-1.5 bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded shadow-sm transition flex items-center justify-center gap-1">
+                <i data-lucide="mail-check" class="w-3.5 h-3.5"></i> 志願者への返信用データを出力する
+              </button>
+              <p class="text-[9px] text-slate-500 text-center leading-tight">※ステータス更新後、このファイルを出力して志願者へメールで返信してください。<br>志願者はこのファイルをスマホ等で読み込むことで最新結果を確認できます。</p>
+            </div>
           </div>
         </div>
       `;
       lucide.createIcons();
+    }
+
+    // ★ 志願者への返信結果用ファイル(.dat)をダウンロードする
+    function downloadResultFile(id) {
+      const applicant = state.applicants.find(app => app.id === id);
+      if (!applicant) return;
+      
+      const encryptedText = encryptData(JSON.stringify(applicant));
+      const blob = new Blob([encryptedText], { type: "text/plain;charset=utf-8" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      // 分かりやすいようにファイル名を「審査結果」に変更
+      a.download = `審査結果_${applicant.id}_${applicant.name.replace(/\s+/g, "")}.dat`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      
+      addAuditLog("DATA_EXPORT", `出願番号: ${id} の志願者返信用データを出力しました。`, "info");
+      showToast("返信用データを出力しました。志願者へメール添付で返信してください。", "success");
     }
 
     function toggleFeePaid(id) {
